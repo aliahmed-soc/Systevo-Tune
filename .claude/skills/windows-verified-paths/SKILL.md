@@ -24,8 +24,8 @@ A documentation pass covered every outstanding item. Three tiers now exist:
 | Tier | Meaning | Count |
 |---|---|---|
 | **Verified** | Confirmed against Microsoft reference documentation | 12 |
-| **Undocumented** | Microsoft does not document it. Community-sourced, needs a VM check | 13 |
-| **Open question** | A real behavioural question the docs raised | 5 |
+| **Undocumented** | Microsoft does not document it. Community-sourced, needs a VM check | 15 |
+| **Open question** | A real behavioural question the docs raised | 5 open, 1 resolved |
 
 Nothing has run on a machine. "Verified" means the value matches Microsoft's own reference —
 not that our use of it behaves as expected. The VM run is still required.
@@ -159,6 +159,12 @@ on consumer installs, and Gaming falls back to High Performance.
 |---|---|---|---|
 | N5 | `HKCU\Software\Microsoft\GameBar::AutoGameModeEnabled` | DWORD | `1` on, `0` off |
 | N6 | `HKCU\System\GameConfigStore::GameDVR_Enabled` | DWORD | `0` off |
+| N16 | `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR::HistoricalCaptureEnabled` | DWORD | `0` off. The **"Record what happened"** background-recording toggle specifically — the precise lever doc 3.6 asks for |
+| N17 | `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR::AppCaptureEnabled` | DWORD | `0` off. **Broader than background recording** — also stops the user recording a clip by hand |
+
+N16 and N17 were added 2026-07-27 on the user's instruction, resolving what was open question O6.
+The scope difference between them is real and is why the tweak's display name dropped the word
+"background" — see decision 30. Both are restored by undo.
 
 ## GPU scheduling
 
@@ -252,10 +258,11 @@ the VM** whether to detect support properly instead.
 `Checkpoint-Computer` and interpreting the result — or querying with the documented cmdlet —
 would replace both undocumented registry reads with supported API surface. Worth doing.
 
-**O6 — Game Bar background recording may need a second value.** Community sources name
-`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR::AppCaptureEnabled` alongside N6.
-Setting only `GameDVR_Enabled` may not fully stop background capture. **Not added** — golden rule
-5 forbids adding an unverified path silently. Confirm in the VM, then add it here first.
+**O6 — RESOLVED 2026-07-27.** The user authorised adding the missing values, which is the
+approval golden rule 5 asks for. Research then found **two** values rather than one, with
+different scopes: `HistoricalCaptureEnabled` is background recording specifically, and
+`AppCaptureEnabled` is all capture including manual clips. Both are now in the whitelist as N16
+and N17. Still confirm in the VM that they behave as described.
 
 ---
 

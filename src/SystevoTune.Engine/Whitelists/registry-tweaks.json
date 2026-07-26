@@ -1,8 +1,9 @@
 {
   "$comment": [
     "Every registry value the engine is allowed to write. Nothing here may be hard-coded in C#.",
-    "UNVERIFIED: all of these came from model knowledge on 2026-07-26 and are listed in the",
-    "windows-verified-paths skill as U17-U26. Check each against Microsoft docs before a VM run.",
+    "AllowGameDVR is VERIFIED against the ApplicationManagement Policy CSP. Everything else here",
+    "is undocumented by Microsoft and community-sourced - see Tier 2 of the windows-verified-paths",
+    "skill. Confirm each in the VM before trusting it.",
     "Forbidden by project rule and never to be added here: anything under Defender, the firewall,",
     "network, audio, or printer services."
   ],
@@ -100,14 +101,29 @@
     },
     {
       "id": "game-bar.background-recording-off",
-      "nameEn": "Xbox Game Bar background recording off",
-      "nameAr": "إيقاف التسجيل الخلفي لشريط الألعاب",
+      "nameEn": "Xbox Game Bar recording off",
+      "nameAr": "إيقاف تسجيل شريط الألعاب",
       "requiresRestart": false,
+      "note": "Scope widened 2026-07-27 - see decision 30. HistoricalCaptureEnabled is the precise 'Record what happened' background-recording lever doc 3.6 asks for. AppCaptureEnabled is broader: it also stops the user recording a clip by hand, which is why the display name no longer says 'background'. Undo restores both.",
       "values": [
         {
           "root": "HKCU",
           "key": "System\\GameConfigStore",
           "name": "GameDVR_Enabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+          "name": "HistoricalCaptureEnabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+          "name": "AppCaptureEnabled",
           "type": "Dword",
           "data": "0"
         },

@@ -166,8 +166,68 @@ public class RegistryTweakTests : IDisposable
         var report = await _runner.ApplyAsync([Tweak("game-bar.background-recording-off")], run);
 
         Assert.True(report.AllSucceeded);
-        Assert.Equal(2, log.ReadRun(run.RunId).Records.Count);
+        Assert.Equal(4, log.ReadRun(run.RunId).Records.Count);
         Assert.Equal(RegistryValue.Dword(0), _registry.GetValue(Ref("game-bar.background-recording-off", 0)));
+    }
+
+    // ---- Game Bar capture: the two levers added for O6 ----
+
+    [Fact]
+    public void Game_bar_capture_covers_both_the_background_and_the_manual_lever()
+    {
+        var names = _catalog.Find("game-bar.background-recording-off")!.Values
+            .Select(value => value.Name)
+            .ToList();
+
+        Assert.Contains("GameDVR_Enabled", names);
+        Assert.Contains("HistoricalCaptureEnabled", names);
+        Assert.Contains("AppCaptureEnabled", names);
+        Assert.Contains("AllowGameDVR", names);
+    }
+
+    [Fact]
+    public void The_capture_values_live_under_the_documented_game_dvr_key()
+    {
+        var entry = _catalog.Find("game-bar.background-recording-off")!;
+
+        foreach (var name in (string[])["HistoricalCaptureEnabled", "AppCaptureEnabled"])
+        {
+            var value = entry.Values.Single(candidate => candidate.Name == name);
+            Assert.Equal(RegistryRoot.CurrentUser, value.ToRef().Root);
+            Assert.Equal(@"SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR", value.ToRef().KeyPath);
+            Assert.Equal(RegistryValueType.Dword, value.Type);
+            Assert.Equal("0", value.Data);
+        }
+    }
+
+    [Fact]
+    public void The_name_no_longer_claims_to_be_background_only()
+    {
+        // AppCaptureEnabled also stops manual clip recording, so the old name would have
+        // undersold what the tweak does. Decision 30.
+        Assert.DoesNotContain(
+            "background",
+            _catalog.Find("game-bar.background-recording-off")!.NameEn,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Undo_restores_every_capture_value_the_tweak_touched()
+    {
+        var entry = _catalog.Find("game-bar.background-recording-off")!;
+        // A PC with capture on and one value never set at all.
+        _registry.With(entry.Values[0].ToRef(), RegistryValue.Dword(1));
+        _registry.With(entry.Values[1].ToRef(), RegistryValue.Dword(1));
+        var log = NewLog();
+        await _runner.ApplyAsync([Tweak("game-bar.background-recording-off")], log.StartRun());
+
+        var undo = await new UndoEngine(log, [new RegistryUndoHandler(_registry)]).UndoAllAsync();
+
+        Assert.True(undo.AllSucceeded);
+        Assert.Equal(RegistryValue.Dword(1), _registry.GetValue(entry.Values[0].ToRef()));
+        Assert.Equal(RegistryValue.Dword(1), _registry.GetValue(entry.Values[1].ToRef()));
+        Assert.Null(_registry.GetValue(entry.Values[2].ToRef()));
+        Assert.Null(_registry.GetValue(entry.Values[3].ToRef()));
     }
 
     [Fact]
