@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "The Work preset from docs/03-features-core.md. Balanced and stable, laptop-friendly.",
+    "Visual effects stay on, Game Mode off. Cleanup is the same in both profiles."
+  ],
+  "id": "work",
+  "nameEn": "Work",
+  "nameAr": "العمل",
+  "descriptionEn": "Balanced and stable. Effects stay on, battery-friendly power plan.",
+  "descriptionAr": "متوازن ومستقر. المؤثرات تبقى مفعّلة، وخطة طاقة مناسبة للبطارية.",
+  "steps": [
+    { "kind": "cleanup", "id": "temp-files" },
+    { "kind": "cleanup", "id": "windows-update-cache" },
+    { "kind": "cleanup", "id": "recycle-bin" },
+    { "kind": "powerPlan", "preferred": ["balanced"] },
+    { "kind": "registry", "id": "visual-effects.appearance" },
+    { "kind": "registry", "id": "game-mode.off" }
+  ]
+}

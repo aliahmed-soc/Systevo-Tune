@@ -1,0 +1,22 @@
+{
+  "$comment": [
+    "The Gaming preset from docs/03-features-core.md. Steps run in this order.",
+    "Every id here must exist in the matching whitelist file, or the profile fails to load.",
+    "Startup apps are deliberately absent - see docs/DECISIONS.md decision 17."
+  ],
+  "id": "gaming",
+  "nameEn": "Gaming",
+  "nameAr": "الألعاب",
+  "descriptionEn": "Maximum speed. Fewer background effects, a faster power plan, gaming features on.",
+  "descriptionAr": "أقصى سرعة. مؤثرات أقل، خطة طاقة أسرع، وخصائص الألعاب مفعّلة.",
+  "steps": [
+    { "kind": "cleanup", "id": "temp-files" },
+    { "kind": "cleanup", "id": "windows-update-cache" },
+    { "kind": "cleanup", "id": "recycle-bin" },
+    { "kind": "powerPlan", "preferred": ["ultimate-performance", "high-performance"] },
+    { "kind": "registry", "id": "visual-effects.performance" },
+    { "kind": "registry", "id": "game-mode.on" },
+    { "kind": "registry", "id": "game-bar.background-recording-off" },
+    { "kind": "registry", "id": "gpu-scheduling.on" }
+  ]
+}

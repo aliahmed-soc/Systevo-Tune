@@ -19,6 +19,7 @@
       next to the exe. Editing the repo copy and rebuilding is the only way to change them.
     -->
     <EmbeddedResource Include="Whitelists\*.json" />
+    <EmbeddedResource Include="Profiles\*.json" />
   </ItemGroup>
 
 </Project>
