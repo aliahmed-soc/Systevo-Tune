@@ -100,6 +100,27 @@ That is corroboration from the project's own plan, not a Microsoft source — st
 | U12 | Ultimate performance | `e9a42b02-d5df-448d-aa00-03f14749eb61` |
 | U13 | Power saver | `a1841308-3541-4fab-bc81-f71556f20b4a` |
 
+### Registry tweak values (`Whitelists/registry-tweaks.json`)
+
+| # | Tweak | Ref | Type | Assumed meaning |
+|---|---|---|---|---|
+| U17 | Visual effects | `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects::VisualFXSetting` | DWORD | `1` best appearance, `2` best performance, `3` custom. |
+| U18 | Visual effects | `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize::EnableTransparency` | DWORD | `0` off. |
+| U19 | Visual effects | `HKCU\Control Panel\Desktop\WindowMetrics::MinAnimate` | REG_SZ | `"0"` off. Note it is a string, not a DWORD. |
+| U20 | Game Mode | `HKCU\Software\Microsoft\GameBar::AutoGameModeEnabled` | DWORD | `1` on. |
+| U21 | Game Bar recording | `HKCU\System\GameConfigStore::GameDVR_Enabled` | DWORD | `0` off. |
+| U22 | Game Bar recording | `HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR::AllowGameDVR` | DWORD | `0` off by policy. |
+| U23 | GPU scheduling | `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers::HwSchMode` | DWORD | `2` on, `1` off. Needs a restart (doc 3.6). Treated as NotApplicable when the value is absent, so the engine never invents it on unsupported hardware. |
+
+Open questions for whoever verifies these:
+
+- **U17–U19**: setting `VisualFXSetting` alone may not repaint until Explorer restarts or the user
+  signs out. Check whether a `SystemParametersInfo` call is needed for the change to show
+  immediately, and whether `UserPreferencesMask` also has to move.
+- **U22** writes a policy key under HKLM. Confirm this is the right lever rather than a per-user
+  setting, and that it does not leave Group Policy in a state the user cannot change back through
+  the normal UI.
+
 ### Commands and native calls
 
 | # | Purpose | Call | Assumed behaviour |
