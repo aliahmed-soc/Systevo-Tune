@@ -36,12 +36,14 @@ public sealed class RegistryTweak(IRegistryService registry, RegistryTweakEntry 
             var reference = wanted.ToRef();
             var current = registry.GetValue(reference);
 
-            // Some settings only exist where the hardware supports them. Writing the value on a
-            // PC that never had it would invent a setting rather than change one.
+            // Writing a value the PC never had would invent a setting rather than change one.
+            // An absent value can mean either "unsupported" or "Windows is deciding for itself"
+            // — the message says so rather than claiming to know which.
             if (current is null && entry.RequiresExistingValue)
             {
                 return Task.FromResult(TweakPlan.NotApplicable(Id, Name,
-                    $"{entry.NameEn} is not available on this PC, so nothing was changed."));
+                    $"{entry.NameEn}: Windows has no setting recorded for this, so it is either "
+                    + "unsupported here or left at Windows' own default. Nothing was changed."));
             }
 
             var target = wanted.ToValue();

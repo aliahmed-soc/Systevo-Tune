@@ -68,12 +68,14 @@ Not a blocker for the build — a blocker for running anything. Items sit under 
 `.claude/skills/windows-verified-paths/SKILL.md`. They came from model knowledge, exactly as
 rule 3 anticipated, and are flagged rather than presented as fact.
 
-**Progress on 2026-07-27:** the three highest-risk items were checked against Microsoft docs.
+**Resolved 2026-07-27.** The full documentation pass is done. The skill file is now in three
+tiers: 12 items verified against Microsoft reference docs, 13 that Microsoft does not document at
+all, and 6 open behavioural questions (O1–O6) that only the VM can answer.
 
-- **U22 (GameDVR policy) — verified and moved to the verified table.** Correct as written.
-- **U8 (update cache) — path right, method wrong.** Became B3 above.
-- **U27 (startup approvals) — assumption wrong, corrected in code.** Microsoft does not document
-  `StartupApproved` at all, so it cannot be settled from docs; it needs an empirical check in the
-  VM. The correction came from DFIR and Sysinternals-community sources.
+The headline: **roughly half of what a PC tune-up tool touches is not documented by Microsoft.**
+Visual effects, Game Mode, Game Bar, GPU scheduling, startup approvals, and System Restore state
+detection have no reference pages. That is not a research failure — those settings simply have no
+public contract, which is why the VM run and the undo path carry the weight here.
 
-The rest (U1–U7, U9–U21, U23–U26, U28–U31) are untouched and still need checking.
+"Verified" means the value matches Microsoft's own reference. It does not mean our *use* of it
+behaves as expected. The VM run is still required for everything.

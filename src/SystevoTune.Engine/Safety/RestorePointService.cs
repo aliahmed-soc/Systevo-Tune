@@ -92,8 +92,9 @@ public sealed class RestorePointService(IRegistryService registry, IProcessRunne
 
         var output = result.AllOutput;
 
-        // Windows reports the frequency limit as a warning and still exits 0, so check the text
-        // before trusting the exit code.
+        // Microsoft documents the 24-hour limit as an error, not a warning, but a PowerShell
+        // non-terminating error does not reliably set a non-zero exit code. Match the text first
+        // so the outcome is right either way.
         if (Mentions(output, FrequencyLimitPhrases))
         {
             return new RestorePointResult(

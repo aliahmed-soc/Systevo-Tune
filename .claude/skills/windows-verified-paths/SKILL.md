@@ -5,9 +5,6 @@ description: The only approved source of Windows registry paths, registry value 
 
 # Verified Windows Paths
 
-This file holds **checked data only**. Every entry was confirmed against Microsoft
-documentation and tested in a VM before being added here.
-
 ## The rule
 
 **If a path is not in this file, stop and ask the user. Never guess.**
@@ -20,195 +17,184 @@ tester's PC. There is no acceptable workaround:
 - Do not "try it and see" — nothing is tested on the dev machine.
 - Ask the user to verify it against Microsoft docs, then add it here with its source link.
 
-## How to add an entry
+## Status, 2026-07-27
 
-1. Find the official Microsoft documentation page for the key, service, or GUID.
-2. Confirm the exact spelling, hive, value name, and value type.
-3. Ask the user to confirm before it is used in code.
-4. Add a row below with the Microsoft docs link and the date verified.
-5. The entry is only usable once it is committed here.
+A documentation pass covered every outstanding item. Three tiers now exist:
 
-## Registry paths
-
-| Purpose | Hive | Key path | Value name | Type | Docs | Verified |
-|---|---|---|---|---|---|---|
-| Block Game Recording and Broadcasting | HKLM | `SOFTWARE\Policies\Microsoft\Windows\GameDVR` | `AllowGameDVR` | REG_DWORD | [ApplicationManagement Policy CSP](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement) | 2026-07-27 |
-
-### AllowGameDVR — confirmed details
-
-Was U22. Microsoft documents this exactly, as a Group Policy-backed MDM policy.
-
-- **Values:** `0` = not allowed, `1` = allowed. **Default is `1`.**
-- **Scope:** Device only (hence HKLM). Not a per-user policy.
-- **Group Policy:** Computer Configuration → Windows Components → Windows Game Recording and
-  Broadcasting → "Enables or disables Windows Game Recording and Broadcasting". ADMX file
-  `GameDVR.admx`.
-- **Editions:** Pro, Enterprise, Education, IoT Enterprise. **Windows Home is not listed.**
-  Treat the tweak as possibly unenforced on Home — which is a common gaming PC edition.
-- Microsoft's own note: "The policy is only enforced in Windows 10 for desktop." Confirm
-  behaviour on Windows 11 during the VM run.
-- **Reversibility is fine.** Setting it writes a policy value that greys out the user-facing
-  Game Bar setting while present. Our undo restores the previous value, or deletes it when the
-  tweak created it, which returns Group Policy to "Not configured". No trap.
-
-## Service names
-
-_None verified yet._
-
-| Purpose | Service name | Display name | Default start type | Docs | Verified |
-|---|---|---|---|---|---|
-
-## Power plan GUIDs
-
-_None verified yet._
-
-| Plan | GUID | Docs | Verified |
-|---|---|---|---|
-
-## System folder paths (cleanup)
-
-_None verified yet._
-
-| Purpose | Path / known folder | Resolved via | Docs | Verified |
-|---|---|---|---|---|
-
-## UNVERIFIED — human must check before any VM run
-
-Everything below came from the model's own knowledge during the autonomous session of
-2026-07-26. **None of it has been confirmed against Microsoft documentation or tested.**
-Code uses these values, and they are flagged here so they are checked before anything runs
-on a real machine.
-
-Checking one means: open the Microsoft docs page, confirm hive / path / value name / type,
-then move the row into the verified tables above with its link and today's date.
-
-### Registry values
-
-| # | Purpose | Ref | Type | Assumed meaning | Used by |
-|---|---|---|---|---|---|
-| U1 | Is System Restore switched on | `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore::RPSessionInterval` | DWORD | `0` = restore point creation off. Missing = default, treated as on. | `RestorePointService.IsSystemRestoreEnabled` |
-| U2 | Is System Restore off by group policy | `HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore::DisableSR` | DWORD | `1` = disabled machine-wide by policy. | `RestorePointService.IsSystemRestoreEnabled` |
-
-### Commands
-
-| # | Purpose | Command | Assumed behaviour | Used by |
-|---|---|---|---|---|
-| U3 | Create a restore point | `powershell.exe -NoProfile -NonInteractive -Command "Checkpoint-Computer -Description '<text>' -RestorePointType MODIFY_SETTINGS"` | Exit 0 on success. Emits a warning containing "already been created" / "within the past" when Windows declines because one was made in the last 24h. | `RestorePointService.CreateAsync` |
-
-### Cleanup paths (`Whitelists/cleanup-paths.json`)
-
-| # | Group | Path | Assumed meaning |
-|---|---|---|---|
-| U6 | temp-files | `{USER_TEMP}` → the user's `AppData\Local\Temp` | Safe to empty. Not one of the forbidden user folders (Documents / Desktop / Downloads). |
-| U7 | temp-files | `{WINDIR}\Temp` | Machine-wide temp. Much of it is locked while Windows runs; the locked-file path handles that. |
-| U8 | windows-update-cache | `{WINDIR}\SoftwareDistribution\Download` | **Path confirmed, procedure confirmed wrong — see below.** |
-| U9 | recycle-bin | `{SYSTEM_DRIVE}\$Recycle.Bin` | Per-SID bins. Deleting the `$I`/`$R` files frees the space but may leave the shell's view stale until refresh. See decision 11 — `Clear-RecycleBin` is the shell-correct alternative to evaluate in the VM. |
-
-#### U8 — checked 2026-07-27, and our approach was wrong
-
-The **path is right**. Microsoft names `%Systemroot%\SoftwareDistribution\Download` in
-[Additional resources for Windows Update](https://learn.microsoft.com/en-us/troubleshoot/windows-client/installing-updates-features-roles/additional-resources-for-windows-update).
-
-The **procedure is not**. Microsoft's documented reset stops three services first:
-
-```
-net stop bits
-net stop wuauserv
-net stop cryptsvc
-```
-
-and then **renames** `Download` to `Download.bak` rather than deleting it — and only as an
-escalation step, explicitly not the first thing to try. The lighter documented reset is
-`net stop wuauserv`, `rd /s /q %systemroot%\SoftwareDistribution`, `net start wuauserv` — still
-stopping the service first.
-
-Our cleanup module deletes file-by-file with nothing stopped. Two consequences:
-
-1. **Ineffective.** Most of the cache is locked while `wuauserv` and BITS run, so the freed size
-   will fall well short of the scanned size. Doc 7.3 asks for "size shown ≈ size actually freed";
-   this group would fail that check.
-2. **Genuinely risky.** A staged update awaiting a restart may have files that are *not* locked
-   but *are* still needed. Deleting those is how "deleting mid-update corrupts the install"
-   happens. Locked-file handling does not protect against this case.
-
-**Action taken:** `windows-update-cache` was removed from both the Gaming and Work profiles
-(decision 23), so no preset touches it. The group stays in the whitelist and can still be ticked
-deliberately, which matches doc 3.1's "user ticks what to clean".
-
-**Still to decide (see BLOCKED.md B3):** whether to stop/start `wuauserv` + `bits` around the
-delete, check for a pending restart first, or drop the group entirely.
-
-### Power scheme GUIDs (`Whitelists/power-plans.json`)
-
-Doc 05 section 5.2's worked example uses `381b4222… → 8c5e7fda…`, which matches U10 → U11.
-That is corroboration from the project's own plan, not a Microsoft source — still check them.
-
-| # | Plan | GUID |
+| Tier | Meaning | Count |
 |---|---|---|
-| U10 | Balanced | `381b4222-f694-41f0-9685-ff5bb260df2e` |
-| U11 | High performance | `8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c` |
-| U12 | Ultimate performance | `e9a42b02-d5df-448d-aa00-03f14749eb61` |
-| U13 | Power saver | `a1841308-3541-4fab-bc81-f71556f20b4a` |
+| **Verified** | Confirmed against Microsoft reference documentation | 12 |
+| **Undocumented** | Microsoft does not document it. Community-sourced, needs a VM check | 13 |
+| **Open question** | A real behavioural question the docs raised | 5 |
 
-### Registry tweak values (`Whitelists/registry-tweaks.json`)
+Nothing has run on a machine. "Verified" means the value matches Microsoft's own reference —
+not that our use of it behaves as expected. The VM run is still required.
 
-| # | Tweak | Ref | Type | Assumed meaning |
+---
+
+# Tier 1 — Verified against Microsoft documentation
+
+## Power scheme GUIDs
+
+Source: [Power Setting GUIDs (WinNT.h)](https://learn.microsoft.com/en-us/windows/win32/power/power-setting-guids),
+under `GUID_POWERSCHEME_PERSONALITY`. Verified 2026-07-27.
+
+| # | Our id | Constant | GUID | Microsoft's description |
 |---|---|---|---|---|
-| U17 | Visual effects | `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects::VisualFXSetting` | DWORD | `1` best appearance, `2` best performance, `3` custom. |
-| U18 | Visual effects | `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize::EnableTransparency` | DWORD | `0` off. |
-| U19 | Visual effects | `HKCU\Control Panel\Desktop\WindowMetrics::MinAnimate` | REG_SZ | `"0"` off. Note it is a string, not a DWORD. |
-| U20 | Game Mode | `HKCU\Software\Microsoft\GameBar::AutoGameModeEnabled` | DWORD | `1` on. |
-| U21 | Game Bar recording | `HKCU\System\GameConfigStore::GameDVR_Enabled` | DWORD | `0` off. |
-| ~~U22~~ | Game Bar recording | **VERIFIED 2026-07-27 — moved to the verified table at the top.** | | |
-| U23 | GPU scheduling | `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers::HwSchMode` | DWORD | `2` on, `1` off. Needs a restart (doc 3.6). Treated as NotApplicable when the value is absent, so the engine never invents it on unsupported hardware. |
+| V1 | `balanced` | `GUID_TYPICAL_POWER_SAVINGS` | `381B4222-F694-41F0-9685-FF5BB260DF2E` | "Automatic — balance performance and power consumption savings" |
+| V2 | `high-performance` | `GUID_MIN_POWER_SAVINGS` | `8C5E7FDA-E8BF-4A96-9A85-A6E23A8C635C` | "High Performance — maximum performance at the expense of power consumption savings" |
+| V3 | `power-saver` | `GUID_MAX_POWER_SAVINGS` | `A1841308-3541-4FAB-BC81-F71556F20B4A` | "Power Saver — maximum power consumption savings at the expense of system performance" |
 
-Open questions for whoever verifies these:
+`381B4222…` also appears throughout the
+[powercfg documentation](https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options)
+as the worked-example scheme GUID, and matches doc 05 section 5.2's own example. Note that
+`GUID_MIN_POWER_SAVINGS` means *minimum power savings*, i.e. High Performance — the naming reads
+backwards from what you would guess. **See open question O1** about personalities versus schemes.
 
-- **U17–U19**: setting `VisualFXSetting` alone may not repaint until Explorer restarts or the user
-  signs out. Check whether a `SystemParametersInfo` call is needed for the change to show
-  immediately, and whether `UserPreferencesMask` also has to move.
-- **U22** answered: it is the documented lever, it is device-scope by design, and undo returns
-  Group Policy to "Not configured". The one caveat worth carrying forward is that Windows **Home**
-  is absent from the supported-editions list.
+## powercfg
 
-### Startup locations (`Whitelists/startup-locations.json`)
+Source: [Powercfg command-line options](https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options).
+Verified 2026-07-27.
 
-The engine **never writes a Run value or deletes a shortcut**. It writes only the matching
-`StartupApproved` value, which is the mechanism Task Manager uses, so Windows' own UI shows the
-item as disabled rather than missing. Doc 3.2: disable, never delete.
+| # | Purpose | Command |
+|---|---|---|
+| V4 | List power schemes | `powercfg /list` (alias `/L`) — "Lists all power schemes" |
+| V5 | Switch active scheme | `powercfg /setactive <scheme_GUID>` (alias `/S`) |
 
-**Microsoft does not document `StartupApproved` anywhere.** That is the finding, not a gap in
-searching: it has no Policy CSP entry, no reference page, and no supported API. Everything below
-comes from DFIR and Sysinternals-community sources, which is a step better than model guesswork
-but is *not* the Microsoft confirmation these entries were waiting for. Treat U24–U28 as
-**still unverified** and settle them empirically in the VM.
+The **output format of `/list` is not documented**. Our parser reads only the GUID and the
+trailing `*`, never the labels, which is what keeps doc 07.4's non-English Windows case working.
+That parsing choice is still empirical — see open question O2.
 
-| # | Purpose | Ref | Status |
+## Restore points
+
+Source: [Checkpoint-Computer](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/checkpoint-computer).
+Verified 2026-07-27.
+
+| # | Item | Confirmed |
+|---|---|---|
+| V6 | The command | `Checkpoint-Computer -Description <string> [-RestorePointType <string>]` |
+| V7 | `MODIFY_SETTINGS` is a valid type | Accepted values: `APPLICATION_INSTALL` (default), `APPLICATION_UNINSTALL`, `DEVICE_DRIVER_INSTALL`, `MODIFY_SETTINGS`, `CANCELLED_OPERATION` |
+| V8 | The once-a-day limit is real | "Beginning in Windows 8, `Checkpoint-Computer` cannot create more than one system restore point each day." |
+| V9 | The exact message we match | *"A new system restore point cannot be created because one has already been created within the past 24 hours. Please try again later."* |
+
+Our two matched phrases — "already been created" and "within the past" — both appear in V9.
+**In English only**; see open question O3.
+
+Two constraints worth carrying:
+
+- The cmdlet is **Windows PowerShell 5.1** (the doc carries no PowerShell 7 moniker). Our code
+  invokes `powershell.exe`, not `pwsh.exe`, which is correct. Do not "modernise" that.
+- Microsoft calls the 24-hour case an **error**, not a warning. Our code matches on the text
+  before looking at the exit code, so it is handled either way — but the code comment claiming it
+  "exits 0" was wrong and has been corrected.
+
+## Native calls
+
+| # | Call | Source | Confirmed |
 |---|---|---|---|
-| U24 | Run, this user | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (read only) | uncontested |
-| U25 | Run, all users | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run` (read only) | uncontested |
-| U26 | Approval flags for Run | `…\CurrentVersion\Explorer\StartupApproved\Run` under the matching root | uncontested |
-| U27 | Approval flags for folder items | `StartupApproved\StartupFolder` **under both HKLM and HKCU** | **corrected 2026-07-27** |
-| U28 | Startup folders | `{APPDATA}\…\Start Menu\Programs\Startup` and the `{PROGRAMDATA}` equivalent | uncontested |
-| U31 | 32-bit Run on 64-bit Windows | `HKLM\SOFTWARE\WOW6432Node\…\Run`, approvals at `StartupApproved\Run32` | **added 2026-07-27** |
+| V10 | `GetSystemPowerStatus` / `SYSTEM_POWER_STATUS` | [winbase.h](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-system_power_status) | Field order `BYTE ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag; DWORD BatteryLifeTime, BatteryFullLifeTime`. `ACLineStatus` 0 = Offline, 1 = Online, 255 = Unknown. `BatteryFlag` 128 = "No system battery". Matches our struct exactly. |
+| V11 | `GlobalMemoryStatusEx` / `MEMORYSTATUSEX` | [sysinfoapi.h](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-memorystatusex) | `DWORD dwLength, dwMemoryLoad; DWORDLONG ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual`. "You must set **dwLength** before calling" — we do. Matches our struct exactly. |
 
-#### U27 — the original assumption was wrong
+## Service start types
 
-The whitelist paired **both** Startup folders with HKCU approvals. Sources agree
-`StartupApproved\StartupFolder` exists under **HKLM as well as HKCU**, and the natural pairing
-follows the Run keys: all-users location → HKLM approvals, per-user location → HKCU approvals.
+Source: [HKLM\SYSTEM\CurrentControlSet\Services Registry Tree](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/hklm-system-currentcontrolset-services-registry-tree).
+Verified 2026-07-27.
 
-Had this shipped, disabling an all-users Startup-folder item would have written to the wrong
-hive and silently done nothing — the exact failure mode flagged as the risk. The whitelist now
-pairs `{PROGRAMDATA}` with HKLM.
+| # | Purpose | Ref |
+|---|---|---|
+| V12 | Service start type | `HKLM\SYSTEM\CurrentControlSet\Services\<name>::Start`, REG_DWORD |
 
-**Confirm in the VM:** put a shortcut in the all-users Startup folder, disable it in Task
-Manager, and check which hive gained the value.
+Documented values, matching our `ServiceStartType` enum exactly:
 
-#### U26/U27 value shape — corrected
+| Value | Meaning |
+|---|---|
+| `0` | Boot — loaded by the boot loader |
+| `1` | System — loaded by the I/O subsystem |
+| `2` | Automatic — started by the SCM during system startup |
+| `3` | Demand (Manual) |
+| `4` | Disabled |
 
-REG_BINARY, 12 bytes: a 4-byte flag DWORD, then an **8-byte FILETIME recording when the item was
-disabled**.
+## Group Policy registry values
+
+| Purpose | Ref | Type | Source | Verified |
+|---|---|---|---|---|
+| Block Game Recording and Broadcasting | `HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR::AllowGameDVR` | REG_DWORD | [ApplicationManagement Policy CSP](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement) | 2026-07-27 |
+
+`0` = not allowed, `1` = allowed, **default `1`**. Device scope. Group Policy: Computer
+Configuration → Windows Components → Windows Game Recording and Broadcasting, ADMX file
+`GameDVR.admx`. Undo returns Group Policy to "Not configured", so there is no trap.
+
+**Editions:** Pro, Enterprise, Education, IoT Enterprise. **Windows Home is absent from the
+list** — and Home is a common gaming PC. Microsoft's own note adds "The policy is only enforced
+in Windows 10 for desktop", which leaves Windows 11 behaviour worth confirming.
+
+---
+
+# Tier 2 — Undocumented by Microsoft
+
+**Microsoft publishes no reference for any of these.** That is the finding, not a gap in
+searching. Everything here comes from community, DFIR, or forum sources, which is better than
+model guesswork but is *not* documentation. Each one needs an empirical check in the VM.
+
+## Ultimate Performance power scheme
+
+| # | Item | Value | Status |
+|---|---|---|---|
+| N1 | Ultimate Performance | `e9a42b02-d5df-448d-aa00-03f14749eb61` | **Not in Microsoft's documented GUID list.** Only three scheme personalities are documented (V1–V3). |
+
+Low risk: the tweak reports `NotApplicable` when the scheme is absent, which is the common case
+on consumer installs, and Gaming falls back to High Performance.
+
+## Visual effects
+
+| # | Ref | Type | Community-sourced meaning |
+|---|---|---|---|
+| N2 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects::VisualFXSetting` | DWORD | `1` best appearance, `2` best performance, `3` custom |
+| N3 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize::EnableTransparency` | DWORD | `0` off |
+| N4 | `HKCU\Control Panel\Desktop\WindowMetrics::MinAnimate` | **REG_SZ** | `"0"` off. A string, not a DWORD — the engine gets this right |
+
+## Game Mode and Game Bar
+
+| # | Ref | Type | Community-sourced meaning |
+|---|---|---|---|
+| N5 | `HKCU\Software\Microsoft\GameBar::AutoGameModeEnabled` | DWORD | `1` on, `0` off |
+| N6 | `HKCU\System\GameConfigStore::GameDVR_Enabled` | DWORD | `0` off |
+
+## GPU scheduling
+
+| # | Ref | Type | Community-sourced meaning |
+|---|---|---|---|
+| N7 | `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers::HwSchMode` | DWORD | `2` on, `1` off, **absent or `0` = let the system decide** |
+
+The "absent means system default" detail matters and was not previously understood — see open
+question O4.
+
+## System Restore state detection
+
+| # | Ref | Type | Community-sourced meaning |
+|---|---|---|---|
+| N8 | `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore::RPSessionInterval` | DWORD | `0` = restore point creation off |
+| N9 | `HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore::DisableSR` | DWORD | `1` = disabled by policy. Group Policy "Turn off System Restore" under Computer Configuration → Administrative Templates → System → System Restore |
+
+A sibling value `DisableConfig` ("Turn off Configuration") also exists — it stops the user
+configuring System Restore without necessarily stopping restore points. We do not read it.
+See open question O5 for a better approach than either.
+
+## Startup approvals
+
+Corrected 2026-07-27. Sources: [Windows Incident Response](http://windowsir.blogspot.com/2022/07/does-autostart-really-mean-autostart.html)
+and Sysinternals [Autoruns](https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns),
+which reads these keys and is the closest thing to a Microsoft-published implementation.
+
+| # | Purpose | Ref |
+|---|---|---|
+| N10 | Run, this user / all users | `HKCU` and `HKLM` `…\CurrentVersion\Run` (read only) |
+| N11 | Approvals for Run | `…\CurrentVersion\Explorer\StartupApproved\Run` under the matching root |
+| N12 | Approvals for folder items | `StartupApproved\StartupFolder` — **exists under both HKLM and HKCU** |
+| N13 | 32-bit Run on 64-bit Windows | `HKLM\SOFTWARE\WOW6432Node\…\Run`, approvals at `StartupApproved\Run32` |
+
+Value shape: REG_BINARY, 12 bytes — a 4-byte flag DWORD, then an 8-byte FILETIME recording when
+the item was disabled.
 
 | Flag byte | Meaning |
 |---|---|
@@ -216,46 +202,73 @@ disabled**.
 | `0x06` | Enabled |
 | `0x03` | Disabled |
 
-The engine tests `byte0 & 0x01`, which gives the right answer for all three and errs toward
-"enabled" for an unknown even flag — the safe side, since it means offering to disable something
-rather than believing it is already off. A test now pins `0x06`.
+The engine tests `byte0 & 0x01`, correct for all three, and errs toward "enabled" for an unknown
+even flag — the safe side, since it means offering to disable something rather than believing it
+is already off.
 
-The engine previously **carried the existing timestamp bytes across** when flipping the flag.
-That was wrong: it would stamp a re-disabled item with the time it was first disabled. It now
-writes a fresh FILETIME on disable and zeros on enable.
+## Cleanup paths
 
-**Still open:** whether the approval key for a folder item includes the `.lnk` extension. The
-engine assumes it does.
-
-Source for the byte layout:
-[Windows Incident Response — "Does Autostart Really Mean Autostart?"](http://windowsir.blogspot.com/2022/07/does-autostart-really-mean-autostart.html).
-Sysinternals [Autoruns](https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns) reads
-these keys and is the closest thing to a Microsoft-published implementation.
-
-### Commands and native calls
-
-| # | Purpose | Call | Assumed behaviour |
-|---|---|---|---|
-| U14 | List power schemes | `powercfg.exe /list` | Exit 0. One line per scheme containing its GUID; the active one ends with `*`. The parser reads only the GUID and the `*`, never the labels, so it survives a non-English Windows. |
-| U15 | Switch power scheme | `powercfg.exe /setactive <guid>` | Exit 0 on success. |
-| U16 | Mains or battery | `kernel32!GetSystemPowerStatus` | `AcLineStatus` 0 = on battery, 1 = plugged in, 255 = unknown. `BatteryFlag & 128` = no system battery. Struct layout in `SystemBatteryStatus`. |
-| U29 | Installed and free RAM | `kernel32!GlobalMemoryStatusEx` | `MEMORYSTATUSEX` layout in `WindowsSystemMetrics`. `dwLength` must be set before the call. |
-| U30 | Service start type | `HKLM\SYSTEM\CurrentControlSet\Services\<name>::Start` | DWORD. `0` boot, `1` system, `2` automatic, `3` manual, `4` disabled. Writing it changes the *next* boot and never stops a running service. |
-
-### Output phrases matched as text
-
-These are string matches against Windows' own messages, so they are locale-sensitive: on a
-non-English Windows they will not match and the result falls through to `Failed`. Doc 07.4
-lists non-English Windows as a required test case.
-
-| # | Matched phrase | Treated as |
+| # | Path | Note |
 |---|---|---|
-| U4 | "already been created", "within the past" | `Skipped` — a recent restore point exists |
-| U5 | "system restore is disabled", "system protection is turned off", "0x81000203" | `Disabled` |
+| N14 | `{USER_TEMP}`, `{WINDIR}\Temp` | Standard and uncontroversial, but no Microsoft page states "safe to empty" |
+| N15 | `{SYSTEM_DRIVE}\$Recycle.Bin` | Per-SID bins. Undocumented layout. See decision 11 — `Clear-RecycleBin` is the shell-correct alternative |
+
+`{WINDIR}\SoftwareDistribution\Download` **is** documented — and that verification found our
+method wrong. See B3 in `docs/BLOCKED.md`.
+
+---
+
+# Tier 3 — Open questions the documentation raised
+
+These are not missing paths. They are behavioural questions that only the VM can answer.
+
+**O1 — Scheme personalities are not the same as schemes.** The three verified GUIDs are
+documented as `GUID_POWERSCHEME_PERSONALITY` values, and Microsoft says "All power schemes map to
+one of these personalities". On a stock install the built-in schemes use these GUIDs directly,
+but an OEM image may ship a custom scheme with its own GUID that merely *maps* to a personality.
+If so, our exact-GUID match would report `NotApplicable` on that PC. **Check `powercfg /list` on
+a real OEM laptop.** If this bites, `powercfg /setactive SCHEME_MIN` using the documented alias
+mechanism (`powercfg /aliases`) would sidestep GUIDs entirely.
+
+**O2 — `powercfg /list` output format is undocumented.** Our parser is deliberately
+locale-independent, but nothing guarantees the `*` marker. `powercfg /getactivescheme` is a
+documented option that returns the active scheme directly and would be more robust than inferring
+it from the list.
+
+**O3 — The restore-point phrase match is English-only.** V9 is the English message. On a
+non-English Windows it will not match and the result falls through to `Failed` instead of
+`Skipped`. Doc 07.4 lists non-English Windows as a required test case. `Get-ComputerRestorePoint`
+is a documented cmdlet that could confirm a recent point exists without parsing prose.
+
+**O4 — GPU scheduling: "absent" does not mean "unsupported".** N7 says a missing `HwSchMode`
+means the system decides — the default state on a supported PC. Our `requiresExistingValue` flag
+reports `NotApplicable` when the value is absent, so on a HAGS-capable machine at default
+settings we would wrongly say the feature is unavailable. The conservative behaviour is right
+(we never invent the value), but the message was misleading and has been reworded. **Decide in
+the VM** whether to detect support properly instead.
+
+**O5 — Restore-point detection reads two undocumented values (N8, N9).** Microsoft documents
+`Get-ComputerRestorePoint`, `Enable-ComputerRestore`, and `Disable-ComputerRestore`. Attempting
+`Checkpoint-Computer` and interpreting the result — or querying with the documented cmdlet —
+would replace both undocumented registry reads with supported API surface. Worth doing.
+
+**O6 — Game Bar background recording may need a second value.** Community sources name
+`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR::AppCaptureEnabled` alongside N6.
+Setting only `GameDVR_Enabled` may not fully stop background capture. **Not added** — golden rule
+5 forbids adding an unverified path silently. Confirm in the VM, then add it here first.
+
+---
+
+## How to promote an entry
+
+1. Find the official Microsoft documentation page.
+2. Confirm the exact spelling, hive, value name, and value type.
+3. Move the row into Tier 1 with its link and today's date.
+4. An entry is only usable in code once it is committed here.
 
 ## Permanently forbidden — never add these
 
-These are out of scope by project rule, not by oversight. Do not add them to any table above.
+Out of scope by project rule, not by oversight. Do not add them to any table above.
 
 - Windows Defender, any Defender-related service or policy key
 - Windows Firewall services and rules

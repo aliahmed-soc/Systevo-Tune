@@ -1,10 +1,14 @@
 {
   "$comment": [
     "Power scheme GUIDs. Never hard-code one in C#.",
-    "UNVERIFIED: these came from model knowledge on 2026-07-26 and are listed in the",
-    "windows-verified-paths skill as U10-U13. Check each against Microsoft docs before a VM run.",
-    "Corroboration: docs/05-safety-layer.md 5.2 uses 381b4222 -> 8c5e7fda as its worked example,",
-    "which matches Balanced -> High performance below."
+    "VERIFIED 2026-07-27 against Power Setting GUIDs (WinNT.h), under GUID_POWERSCHEME_PERSONALITY:",
+    "https://learn.microsoft.com/en-us/windows/win32/power/power-setting-guids",
+    "  balanced         = GUID_TYPICAL_POWER_SAVINGS",
+    "  high-performance = GUID_MIN_POWER_SAVINGS  (minimum power SAVINGS, i.e. maximum performance)",
+    "  power-saver      = GUID_MAX_POWER_SAVINGS",
+    "Ultimate performance is NOT in Microsoft's documented list - still unverified (N1).",
+    "Open question O1: these are documented as scheme PERSONALITIES. A stock install uses them as",
+    "the scheme GUIDs directly, but an OEM image may ship a custom scheme that merely maps to one."
   ],
   "version": 1,
   "plans": [
