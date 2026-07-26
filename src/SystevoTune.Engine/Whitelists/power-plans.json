@@ -1,0 +1,36 @@
+{
+  "$comment": [
+    "Power scheme GUIDs. Never hard-code one in C#.",
+    "UNVERIFIED: these came from model knowledge on 2026-07-26 and are listed in the",
+    "windows-verified-paths skill as U10-U13. Check each against Microsoft docs before a VM run.",
+    "Corroboration: docs/05-safety-layer.md 5.2 uses 381b4222 -> 8c5e7fda as its worked example,",
+    "which matches Balanced -> High performance below."
+  ],
+  "version": 1,
+  "plans": [
+    {
+      "id": "balanced",
+      "guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+      "nameEn": "Balanced",
+      "nameAr": "متوازن"
+    },
+    {
+      "id": "high-performance",
+      "guid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+      "nameEn": "High performance",
+      "nameAr": "أداء عالي"
+    },
+    {
+      "id": "ultimate-performance",
+      "guid": "e9a42b02-d5df-448d-aa00-03f14749eb61",
+      "nameEn": "Ultimate performance",
+      "nameAr": "أداء فائق"
+    },
+    {
+      "id": "power-saver",
+      "guid": "a1841308-3541-4fab-bc81-f71556f20b4a",
+      "nameEn": "Power saver",
+      "nameAr": "توفير الطاقة"
+    }
+  ]
+}

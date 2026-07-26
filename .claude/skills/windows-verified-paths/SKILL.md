@@ -88,6 +88,26 @@ then move the row into the verified tables above with its link and today's date.
 | U8 | windows-update-cache | `{WINDIR}\SoftwareDistribution\Download` | Downloaded update payloads. Windows re-downloads if needed. **Check whether the Windows Update service should be stopped first** — deleting while it runs may be refused or may confuse pending updates. |
 | U9 | recycle-bin | `{SYSTEM_DRIVE}\$Recycle.Bin` | Per-SID bins. Deleting the `$I`/`$R` files frees the space but may leave the shell's view stale until refresh. See decision 11 — `Clear-RecycleBin` is the shell-correct alternative to evaluate in the VM. |
 
+### Power scheme GUIDs (`Whitelists/power-plans.json`)
+
+Doc 05 section 5.2's worked example uses `381b4222… → 8c5e7fda…`, which matches U10 → U11.
+That is corroboration from the project's own plan, not a Microsoft source — still check them.
+
+| # | Plan | GUID |
+|---|---|---|
+| U10 | Balanced | `381b4222-f694-41f0-9685-ff5bb260df2e` |
+| U11 | High performance | `8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c` |
+| U12 | Ultimate performance | `e9a42b02-d5df-448d-aa00-03f14749eb61` |
+| U13 | Power saver | `a1841308-3541-4fab-bc81-f71556f20b4a` |
+
+### Commands and native calls
+
+| # | Purpose | Call | Assumed behaviour |
+|---|---|---|---|
+| U14 | List power schemes | `powercfg.exe /list` | Exit 0. One line per scheme containing its GUID; the active one ends with `*`. The parser reads only the GUID and the `*`, never the labels, so it survives a non-English Windows. |
+| U15 | Switch power scheme | `powercfg.exe /setactive <guid>` | Exit 0 on success. |
+| U16 | Mains or battery | `kernel32!GetSystemPowerStatus` | `AcLineStatus` 0 = on battery, 1 = plugged in, 255 = unknown. `BatteryFlag & 128` = no system battery. Struct layout in `SystemBatteryStatus`. |
+
 ### Output phrases matched as text
 
 These are string matches against Windows' own messages, so they are locale-sensitive: on a
