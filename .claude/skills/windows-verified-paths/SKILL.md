@@ -121,6 +121,32 @@ Open questions for whoever verifies these:
   setting, and that it does not leave Group Policy in a state the user cannot change back through
   the normal UI.
 
+### Startup locations (`Whitelists/startup-locations.json`)
+
+The engine **never writes a Run value or deletes a shortcut**. It writes only the matching
+`StartupApproved` value, which is the mechanism Task Manager uses, so Windows' own UI shows the
+item as disabled rather than missing. Doc 3.2: disable, never delete.
+
+| # | Purpose | Ref |
+|---|---|---|
+| U24 | Run, this user | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (read only) |
+| U25 | Run, all users | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run` (read only) |
+| U26 | Approval flags for Run | `…\CurrentVersion\Explorer\StartupApproved\Run` under the matching root |
+| U27 | Approval flags for folder items | `HKCU\…\Explorer\StartupApproved\StartupFolder` |
+| U28 | Startup folders | `{APPDATA}\Microsoft\Windows\Start Menu\Programs\Startup` and the `{PROGRAMDATA}` equivalent |
+
+Assumed value shape for U26/U27: REG_BINARY, 12 bytes. Byte 0 is the flag — `0x02` enabled,
+`0x03` disabled; the engine tests `byte0 & 0x01`. Bytes 4–11 look like a timestamp and are
+preserved when the flag is flipped.
+
+Open questions for whoever verifies these:
+
+- Confirm the flag semantics, especially whether any value other than `0x02`/`0x03` appears.
+- Confirm that the all-users Startup folder's approvals really live under **HKCU** (U27) rather
+  than HKLM. The whitelist currently assumes HKCU for both folder locations.
+- Confirm the approval key name for a folder item is the shortcut's file name **including** the
+  `.lnk` extension.
+
 ### Commands and native calls
 
 | # | Purpose | Call | Assumed behaviour |

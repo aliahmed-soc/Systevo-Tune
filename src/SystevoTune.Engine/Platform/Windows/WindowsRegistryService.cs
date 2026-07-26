@@ -20,6 +20,15 @@ public sealed class WindowsRegistryService : IRegistryService
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<string> GetValueNames(RegistryRoot root, string keyPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyPath);
+
+        using var key = OpenRoot(root).OpenSubKey(keyPath, writable: false);
+        return key is null ? [] : key.GetValueNames();
+    }
+
+    /// <inheritdoc />
     public RegistryValue? GetValue(RegistryValueRef reference)
     {
         ArgumentNullException.ThrowIfNull(reference);
@@ -39,6 +48,7 @@ public sealed class WindowsRegistryService : IRegistryService
             RegistryValueKind.ExpandString => new RegistryValue(RegistryValueType.ExpandString, Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty),
             RegistryValueKind.DWord => new RegistryValue(RegistryValueType.Dword, Convert.ToInt32(raw, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)),
             RegistryValueKind.QWord => new RegistryValue(RegistryValueType.Qword, Convert.ToInt64(raw, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)),
+            RegistryValueKind.Binary => RegistryValue.Binary((byte[])raw),
             var kind => throw new NotSupportedException(
                 $"'{reference}' holds a {kind} value, which the engine does not read or write."),
         };
@@ -66,6 +76,9 @@ public sealed class WindowsRegistryService : IRegistryService
                 break;
             case RegistryValueType.Qword:
                 key.SetValue(reference.ValueName, long.Parse(value.Data, CultureInfo.InvariantCulture), RegistryValueKind.QWord);
+                break;
+            case RegistryValueType.Binary:
+                key.SetValue(reference.ValueName, value.ToBytes(), RegistryValueKind.Binary);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(value), value.Type, "Unknown registry value type.");

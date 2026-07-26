@@ -1,0 +1,50 @@
+{
+  "$comment": [
+    "Where Windows keeps startup items, and where it records whether each one is enabled.",
+    "UNVERIFIED: model knowledge, 2026-07-26. Listed in windows-verified-paths as U24-U28.",
+    "The engine NEVER writes to a Run key or deletes a shortcut. It only writes the matching",
+    "StartupApproved value, which is the same mechanism Task Manager uses. Doc 3.2: disable,",
+    "never delete."
+  ],
+  "version": 1,
+  "locations": [
+    {
+      "id": "run-current-user",
+      "nameEn": "Startup apps (this user)",
+      "nameAr": "تطبيقات بدء التشغيل (هذا المستخدم)",
+      "kind": "RegistryRun",
+      "root": "HKCU",
+      "key": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "approvedRoot": "HKCU",
+      "approvedKey": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run"
+    },
+    {
+      "id": "run-all-users",
+      "nameEn": "Startup apps (all users)",
+      "nameAr": "تطبيقات بدء التشغيل (كل المستخدمين)",
+      "kind": "RegistryRun",
+      "root": "HKLM",
+      "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "approvedRoot": "HKLM",
+      "approvedKey": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run"
+    },
+    {
+      "id": "startup-folder-current-user",
+      "nameEn": "Startup folder (this user)",
+      "nameAr": "مجلد بدء التشغيل (هذا المستخدم)",
+      "kind": "StartupFolder",
+      "folder": "{APPDATA}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
+      "approvedRoot": "HKCU",
+      "approvedKey": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\StartupFolder"
+    },
+    {
+      "id": "startup-folder-all-users",
+      "nameEn": "Startup folder (all users)",
+      "nameAr": "مجلد بدء التشغيل (كل المستخدمين)",
+      "kind": "StartupFolder",
+      "folder": "{PROGRAMDATA}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
+      "approvedRoot": "HKCU",
+      "approvedKey": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\StartupFolder"
+    }
+  ]
+}

@@ -42,4 +42,10 @@ public interface IEnvironmentPaths
 
     /// <summary>The current user's profile root. Used to work out what is off limits.</summary>
     string UserProfile { get; }
+
+    /// <summary>The current user's roaming AppData folder. Holds the per-user Startup folder.</summary>
+    string AppData { get; }
+
+    /// <summary>ProgramData. Holds the all-users Startup folder.</summary>
+    string ProgramData { get; }
 }

@@ -26,6 +26,9 @@ public enum RegistryValueType
 
     /// <summary>REG_QWORD.</summary>
     Qword,
+
+    /// <summary>REG_BINARY. Data is carried as an uppercase hex string.</summary>
+    Binary,
 }
 
 /// <summary>
@@ -40,6 +43,16 @@ public sealed record RegistryValue(RegistryValueType Type, string Data)
 
     /// <summary>A REG_SZ holding <paramref name="value"/>.</summary>
     public static RegistryValue Text(string value) => new(RegistryValueType.String, value);
+
+    /// <summary>A REG_BINARY holding <paramref name="bytes"/>.</summary>
+    public static RegistryValue Binary(ReadOnlySpan<byte> bytes)
+        => new(RegistryValueType.Binary, Convert.ToHexString(bytes));
+
+    /// <summary>The bytes of a REG_BINARY value.</summary>
+    /// <exception cref="InvalidOperationException">This value is not binary.</exception>
+    public byte[] ToBytes() => Type is RegistryValueType.Binary
+        ? Convert.FromHexString(Data)
+        : throw new InvalidOperationException($"A {Type} value has no bytes.");
 
     /// <summary>
     /// Encodes type and data into the single string the change log stores, e.g. <c>Dword:1</c>.
@@ -115,6 +128,9 @@ public interface IRegistryService
 {
     /// <summary>Whether the key exists.</summary>
     bool KeyExists(RegistryRoot root, string keyPath);
+
+    /// <summary>Names of the values under a key. Empty if the key does not exist.</summary>
+    IReadOnlyList<string> GetValueNames(RegistryRoot root, string keyPath);
 
     /// <summary>The value, or <c>null</c> if the key or the value does not exist.</summary>
     RegistryValue? GetValue(RegistryValueRef reference);

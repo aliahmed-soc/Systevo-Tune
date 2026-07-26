@@ -63,4 +63,10 @@ public sealed class WindowsEnvironmentPaths : IEnvironmentPaths
 
     /// <inheritdoc />
     public string UserProfile => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <inheritdoc />
+    public string AppData => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+    /// <inheritdoc />
+    public string ProgramData => Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
 }

@@ -102,4 +102,8 @@ internal sealed class FakeEnvironmentPaths : IEnvironmentPaths
     public string SystemDrive { get; init; } = @"C:\";
 
     public string UserProfile { get; init; } = @"C:\FakeUsers\tester";
+
+    public string AppData { get; init; } = @"C:\FakeUsers\tester\AppData\Roaming";
+
+    public string ProgramData { get; init; } = @"C:\FakeProgramData";
 }

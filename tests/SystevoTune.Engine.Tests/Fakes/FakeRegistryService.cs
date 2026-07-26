@@ -35,6 +35,17 @@ internal sealed class FakeRegistryService : IRegistryService
     public bool KeyExists(RegistryRoot root, string keyPath) => _keys.Contains(keyPath);
 
     /// <inheritdoc />
+    public IReadOnlyList<string> GetValueNames(RegistryRoot root, string keyPath)
+    {
+        var prefix = $"{(root == RegistryRoot.LocalMachine ? "HKLM" : "HKCU")}\\{keyPath}::";
+
+        return _values.Keys
+            .Where(key => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(key => key[prefix.Length..])
+            .ToList();
+    }
+
+    /// <inheritdoc />
     public RegistryValue? GetValue(RegistryValueRef reference)
         => _values.GetValueOrDefault(reference.ToString());
 
