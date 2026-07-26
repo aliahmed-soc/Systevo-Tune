@@ -59,10 +59,21 @@ internal sealed class FakeRegistryService : IRegistryService
         Writes.Add($"{reference} = {value.ToLogValue()}");
     }
 
+    /// <summary>
+    /// Refs whose delete throws while writes still succeed. Models an undo that cannot remove a
+    /// value the engine created — the apply works, the rollback does not.
+    /// </summary>
+    public HashSet<string> FailingDeletes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <inheritdoc />
     public void DeleteValue(RegistryValueRef reference)
     {
         Guard(reference);
+
+        if (FailingDeletes.Contains(reference.ToString()))
+        {
+            throw new UnauthorizedAccessException($"'{reference}' cannot be removed.");
+        }
 
         _values.Remove(reference.ToString());
         Writes.Add($"{reference} = <deleted>");

@@ -46,6 +46,7 @@ public class CommandLineTests
     [InlineData("apply")]
     [InlineData("reapply")]
     [InlineData("undo")]
+    [InlineData("verify")]
     public void Apply_reapply_and_undo_are_the_commands_that_change_the_machine(string command)
         => Assert.True(CommandLine.Parse([command]).ChangesTheMachine);
 

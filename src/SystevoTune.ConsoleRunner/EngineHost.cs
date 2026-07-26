@@ -8,6 +8,8 @@ using SystevoTune.Engine.Startup;
 using SystevoTune.Engine.Tweaks;
 using SystevoTune.Engine.Tweaks.Power;
 using SystevoTune.Engine.Tweaks.Registry;
+using SystevoTune.Engine.Tweaks.Services;
+using SystevoTune.Engine.Verification;
 
 namespace SystevoTune.ConsoleRunner;
 
@@ -28,9 +30,11 @@ internal sealed class EngineHost
         IRestorePointService restorePoints,
         IReadOnlyList<IUndoHandler> undoHandlers,
         IElevation elevation,
-        TweakRunner runner)
+        TweakRunner runner,
+        VerificationRunner verification)
     {
         Runner = runner;
+        Verification = verification;
         Log = log;
         Cleanup = cleanup;
         Startup = startup;
@@ -65,6 +69,8 @@ internal sealed class EngineHost
 
     public TweakRunner Runner { get; }
 
+    public VerificationRunner Verification { get; }
+
     /// <summary>An undo engine over the shipped handlers.</summary>
     public UndoEngine NewUndoEngine() => new(Log, UndoHandlers);
 
@@ -78,29 +84,46 @@ internal sealed class EngineHost
         var powerPlans = new PowerCfgPowerPlanService(processes);
         var powerPlanCatalog = PowerPlanCatalog.Load();
         var registryTweaks = RegistryTweakCatalog.Load();
-        var cleanup = new CleanupModule(
-            CleanupWhitelist.Load(), files, environment, new ScServiceController(processes));
         var profiles = ProfileCatalog.Load();
-        var builder = new ProfileBuilder(
-            cleanup, registryTweaks, registry, powerPlans, powerPlanCatalog, new SystemBatteryStatus());
         var log = ChangeLog.Default();
         var runner = new TweakRunner();
+        var appPackages = new PowerShellAppPackageService(processes);
+        var serviceController = new ScServiceController(processes);
+        var startup = new StartupManager(StartupLocationCatalog.Load(), registry, files, environment);
+        var undoHandlers = new IUndoHandler[]
+        {
+            new RegistryUndoHandler(registry),
+            new PowerPlanUndoHandler(powerPlans),
+            new BloatwareUndoHandler(appPackages),
+        };
+
+        var cleanup = new CleanupModule(CleanupWhitelist.Load(), files, environment, serviceController);
+        var builder = new ProfileBuilder(
+            cleanup, registryTweaks, registry, powerPlans, powerPlanCatalog, new SystemBatteryStatus());
+        var applier = new ProfileApplier(builder, runner);
+
+        var collector = new SystemStateCollector(
+            registry,
+            powerPlans,
+            startup,
+            registryTweaks,
+            ServiceWhitelist.Load(),
+            BloatwareWhitelist.Load(),
+            serviceController,
+            appPackages);
 
         return new EngineHost(
             log,
             cleanup,
-            new StartupManager(StartupLocationCatalog.Load(), registry, files, environment),
+            startup,
             profiles,
             builder,
-            new ProfileApplier(builder, runner),
+            applier,
             new ReapplyService(log, profiles),
             new RestorePointService(registry, processes),
-            [
-                new RegistryUndoHandler(registry),
-                new PowerPlanUndoHandler(powerPlans),
-                new BloatwareUndoHandler(new PowerShellAppPackageService(processes)),
-            ],
+            undoHandlers,
             new WindowsElevation(),
-            runner);
+            runner,
+            new VerificationRunner(collector, applier, log, new UndoEngine(log, undoHandlers)));
     }
 }

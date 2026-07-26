@@ -45,6 +45,9 @@ internal static class Commands
                 "preview" => await PreviewAsync(host, line).ConfigureAwait(false),
                 "apply" => await ApplyAsync(host, line).ConfigureAwait(false),
                 "reapply" => await ReapplyAsync(host).ConfigureAwait(false),
+                "verify" => TryResolveProfile(host, line, out var target)
+                    ? await VerifyCommand.RunAsync(host, target).ConfigureAwait(false)
+                    : 2,
                 "undo" => await UndoAsync(host).ConfigureAwait(false),
                 _ => Unknown(line.Command),
             };
@@ -334,6 +337,8 @@ internal static class Commands
         Console.WriteLine("  apply <profile> --vm  restore point, then apply. CHANGES THE MACHINE.");
         Console.WriteLine("  reapply --vm          run the last applied profile again. CHANGES THE MACHINE.");
         Console.WriteLine("  undo --vm             Undo All, newest first. CHANGES THE MACHINE.");
+        Console.WriteLine("  verify <profile> --vm doc 07.2 in one go: snapshot, apply, undo, compare.");
+        Console.WriteLine("                        CHANGES THE MACHINE and puts it back. Exit 0 = pass.");
         Console.WriteLine();
         Console.WriteLine($"  apply and undo refuse to run without {CommandLine.VmFlag}. Only ever use them in a VM");
         Console.WriteLine("  that has a snapshot you can roll back to.");
