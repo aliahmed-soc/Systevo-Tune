@@ -119,6 +119,22 @@ Documented values, matching our `ServiceStartType` enum exactly:
 | Purpose | Ref | Type | Source | Verified |
 |---|---|---|---|---|
 | Block Game Recording and Broadcasting | `HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR::AllowGameDVR` | REG_DWORD | [ApplicationManagement Policy CSP](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement) | 2026-07-27 |
+| Diagnostic data level | `HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection::AllowTelemetry` | REG_DWORD | [System Policy CSP](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-system) | 2026-07-27 |
+
+### AllowTelemetry — confirmed, and the catch that shapes our tweak
+
+- **Values:** `0` Security, `1` Basic/required (**default**), `3` Full. There is no `2`.
+- **The catch, in Microsoft's own words:** `0` "is only applicable to Windows 10 Enterprise,
+  Windows 10 Education… **Using this setting on other devices is equivalent to setting the value
+  of 1.**"
+- So the engine writes **`1`, not `0`**, and the tweak is called *"Diagnostic data: required
+  only"*. Writing `0` on a Home PC and calling it "telemetry off" would be a promise Windows does
+  not keep — exactly the fake claim doc 01 rules out. Decision 38.
+- **Scope:** Device *and* User. **Editions:** Pro, Enterprise, Education, IoT — **Home is not
+  listed**, same caveat as `AllowGameDVR`.
+- **Group Policy:** Computer and User Configuration → Windows Components → Data Collection and
+  Preview Builds → "Allow Diagnostic Data". ADMX `DataCollection.admx`.
+- Undo removes the value, returning Group Policy to "Not configured".
 
 `0` = not allowed, `1` = allowed, **default `1`**. Device scope. Group Policy: Computer
 Configuration → Windows Components → Windows Game Recording and Broadcasting, ADMX file
@@ -165,6 +181,27 @@ on consumer installs, and Gaming falls back to High Performance.
 N16 and N17 were added 2026-07-27 on the user's instruction, resolving what was open question O6.
 The scope difference between them is real and is why the tweak's display name dropped the word
 "background" — see decision 30. Both are restored by undo.
+
+## Start menu, tips and lock screen (doc 3.9)
+
+All under `HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager`, all REG_DWORD,
+all set to `0`. Microsoft documents none of this key.
+
+| # | Value | Community-sourced meaning |
+|---|---|---|
+| N18 | `SystemPaneSuggestionsEnabled` | App suggestions in the Start menu |
+| N19 | `SubscribedContent-338388Enabled` | Start menu suggested content |
+| N20 | `SilentInstalledAppsEnabled` | Auto-installing suggested apps. The one that puts software on the PC unasked |
+| N21 | `SoftLandingEnabled` | "Get to know Windows" tips |
+| N22 | `SubscribedContent-338389Enabled` | Tips and suggestions in Settings |
+| N23 | `RotatingLockScreenOverlayEnabled` | Spotlight **overlay text** on the lock screen |
+
+`RotatingLockScreenEnabled` — the Spotlight wallpaper itself — is deliberately **not** touched.
+That is a picture the user chose, not an advert.
+
+The `SubscribedContent-NNNNNN` numbers are opaque Microsoft content ids. They are the least
+trustworthy entries in this file: they could change between Windows builds without notice, and a
+stale id simply does nothing. **VM check: confirm each id still corresponds to the setting named.**
 
 ## GPU scheduling
 

@@ -19,6 +19,9 @@
     { "kind": "registry", "id": "visual-effects.performance" },
     { "kind": "registry", "id": "game-mode.on" },
     { "kind": "registry", "id": "game-bar.background-recording-off" },
-    { "kind": "registry", "id": "gpu-scheduling.on" }
+    { "kind": "registry", "id": "gpu-scheduling.on" },
+    { "kind": "registry", "id": "privacy.telemetry-minimal" },
+    { "kind": "registry", "id": "privacy.start-menu-suggestions-off" },
+    { "kind": "registry", "id": "privacy.tips-and-lock-screen-ads-off" }
   ]
 }

@@ -84,8 +84,25 @@ public class ProfileTests : IDisposable
                 "game-mode.on",
                 "game-bar.background-recording-off",
                 "gpu-scheduling.on",
+                "privacy.telemetry-minimal",
+                "privacy.start-menu-suggestions-off",
+                "privacy.tips-and-lock-screen-ads-off",
             ],
             tweaks);
+    }
+
+    [Fact]
+    public void Both_presets_carry_the_privacy_tweaks_doc_3_says_yes_to()
+    {
+        // Doc 03's summary table: privacy tweaks are Yes for Gaming and Yes for Work.
+        foreach (var profile in _profiles.Profiles)
+        {
+            var ids = Builder().Build(profile).Select(tweak => tweak.Id).ToList();
+
+            Assert.Contains("privacy.telemetry-minimal", ids);
+            Assert.Contains("privacy.start-menu-suggestions-off", ids);
+            Assert.Contains("privacy.tips-and-lock-screen-ads-off", ids);
+        }
     }
 
     [Fact]

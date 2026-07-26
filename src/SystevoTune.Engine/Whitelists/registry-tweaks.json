@@ -137,6 +137,82 @@
       ]
     },
     {
+      "id": "privacy.telemetry-minimal",
+      "nameEn": "Diagnostic data: required only",
+      "nameAr": "بيانات التشخيص: الضروري فقط",
+      "requiresRestart": false,
+      "note": "VERIFIED against the System Policy CSP. Deliberately writes 1 (Basic/required), NOT 0. Microsoft states 0 is only honoured on Enterprise, Education and Server - on Home and Pro it behaves exactly like 1. Writing 0 and calling it 'telemetry off' would be a claim we cannot keep, which doc 01 rules out. The name says what actually happens. Decision 38.",
+      "values": [
+        {
+          "root": "HKLM",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "AllowTelemetry",
+          "type": "Dword",
+          "data": "1"
+        }
+      ]
+    },
+    {
+      "id": "privacy.start-menu-suggestions-off",
+      "nameEn": "Start menu suggestions and app pushes off",
+      "nameAr": "إيقاف اقتراحات قائمة ابدأ",
+      "requiresRestart": false,
+      "note": "UNVERIFIED - ContentDeliveryManager is undocumented by Microsoft. N18-N20 in the verified-paths skill. SilentInstalledAppsEnabled is the one that silently installs suggested apps.",
+      "values": [
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SystemPaneSuggestionsEnabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338388Enabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SilentInstalledAppsEnabled",
+          "type": "Dword",
+          "data": "0"
+        }
+      ]
+    },
+    {
+      "id": "privacy.tips-and-lock-screen-ads-off",
+      "nameEn": "Windows tips and lock screen ads off",
+      "nameAr": "إيقاف نصائح ويندوز وإعلانات شاشة القفل",
+      "requiresRestart": false,
+      "note": "UNVERIFIED - ContentDeliveryManager, N21-N23. Turns off the 'get to know Windows' tips and the lock screen Spotlight overlay text. Does NOT turn off the Spotlight wallpaper itself, which is a picture the user chose.",
+      "values": [
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SoftLandingEnabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338389Enabled",
+          "type": "Dword",
+          "data": "0"
+        },
+        {
+          "root": "HKCU",
+          "key": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "RotatingLockScreenOverlayEnabled",
+          "type": "Dword",
+          "data": "0"
+        }
+      ]
+    },
+    {
       "id": "gpu-scheduling.on",
       "nameEn": "Hardware-accelerated GPU scheduling on",
       "nameAr": "جدولة وحدة معالجة الرسوميات المسرَّعة",

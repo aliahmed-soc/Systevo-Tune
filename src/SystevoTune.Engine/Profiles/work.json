@@ -14,6 +14,9 @@
     { "kind": "cleanup", "id": "recycle-bin" },
     { "kind": "powerPlan", "preferred": ["balanced"] },
     { "kind": "registry", "id": "visual-effects.appearance" },
-    { "kind": "registry", "id": "game-mode.off" }
+    { "kind": "registry", "id": "game-mode.off" },
+    { "kind": "registry", "id": "privacy.telemetry-minimal" },
+    { "kind": "registry", "id": "privacy.start-menu-suggestions-off" },
+    { "kind": "registry", "id": "privacy.tips-and-lock-screen-ads-off" }
   ]
 }
