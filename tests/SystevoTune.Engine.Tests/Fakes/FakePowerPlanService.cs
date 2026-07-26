@@ -35,6 +35,14 @@ internal sealed class FakePowerPlanService : IPowerPlanService
             return Task.FromException(SetFailure);
         }
 
+        // powercfg refuses a scheme that is not there, so the fake does too. Without this a bug
+        // that activates a scheme we failed to create would pass silently.
+        if (_plans.All(plan => plan.Id != planId))
+        {
+            return Task.FromException(
+                new InvalidOperationException($"There is no power scheme {planId:D} on this PC."));
+        }
+
         Activated.Add(planId);
 
         for (var i = 0; i < _plans.Count; i++)
@@ -42,6 +50,40 @@ internal sealed class FakePowerPlanService : IPowerPlanService
             _plans[i] = _plans[i] with { IsActive = _plans[i].Id == planId };
         }
 
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Templates this fake will copy. Anything else is refused, as Windows would.</summary>
+    public HashSet<Guid> DuplicableTemplates { get; } = [];
+
+    /// <summary>Schemes created through <see cref="TryDuplicateSchemeAsync"/>, in order.</summary>
+    public List<Guid> Created { get; } = [];
+
+    /// <summary>Schemes removed through <see cref="DeleteSchemeAsync"/>, in order.</summary>
+    public List<Guid> Deleted { get; } = [];
+
+    public Task<bool> TryDuplicateSchemeAsync(Guid source, Guid destination, CancellationToken cancellationToken)
+    {
+        if (!DuplicableTemplates.Contains(source))
+        {
+            return Task.FromResult(false);
+        }
+
+        _plans.Add(new PowerPlan(destination, "Copied scheme", IsActive: false));
+        Created.Add(destination);
+        return Task.FromResult(true);
+    }
+
+    public Task DeleteSchemeAsync(Guid planId, CancellationToken cancellationToken)
+    {
+        if (Active == planId)
+        {
+            // Windows refuses this, and undo ordering is what keeps us out of the situation.
+            throw new InvalidOperationException("The active power scheme cannot be deleted.");
+        }
+
+        _plans.RemoveAll(plan => plan.Id == planId);
+        Deleted.Add(planId);
         return Task.CompletedTask;
     }
 }

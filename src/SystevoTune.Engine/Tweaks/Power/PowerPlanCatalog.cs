@@ -22,6 +22,30 @@ public sealed record PowerPlanEntry
     /// <summary>Arabic name.</summary>
     [JsonPropertyName("nameAr")]
     public required string NameAr { get; init; }
+
+    /// <summary>
+    /// Names to match on when no scheme carries <see cref="Guid"/>. Covers an OEM image that
+    /// ships the plan under its own id. English only, so it does not help on a localised Windows.
+    /// </summary>
+    [JsonPropertyName("matchNames")]
+    public IReadOnlyList<string>? MatchNames { get; init; }
+
+    /// <summary>Template to copy when the plan is missing entirely. <c>null</c> means do not create.</summary>
+    [JsonPropertyName("createFrom")]
+    public Guid? CreateFrom { get; init; }
+
+    /// <summary>
+    /// The id a created copy is given. Systevo-owned, not a Windows GUID, and fixed so the change
+    /// log can name the scheme before it exists.
+    /// </summary>
+    [JsonPropertyName("createAs")]
+    public Guid? CreateAs { get; init; }
+
+    /// <summary>Whether this entry can be created when absent.</summary>
+    public bool CanCreate => CreateFrom is not null && CreateAs is not null;
+
+    /// <summary>Every name this plan may appear under, most specific first.</summary>
+    public IEnumerable<string> AllNames() => MatchNames is null ? [NameEn] : MatchNames.Prepend(NameEn);
 }
 
 /// <summary>

@@ -51,6 +51,36 @@ public sealed partial class PowerCfgPowerPlanService(IProcessRunner processes) :
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> TryDuplicateSchemeAsync(Guid source, Guid destination, CancellationToken cancellationToken)
+    {
+        // The two-argument form is documented: "destination_GUID specifies the new power scheme's
+        // GUID". Passing it keeps the created scheme's id predictable, which is what lets the
+        // change log name it before it exists.
+        var result = await processes
+            .RunAsync("powercfg.exe", ["/duplicatescheme", source.ToString("D"), destination.ToString("D")],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        // A missing source scheme is the normal case on a PC that does not offer the plan, so it
+        // is a false rather than an exception.
+        return result.ExitCode == 0;
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteSchemeAsync(Guid planId, CancellationToken cancellationToken)
+    {
+        var result = await processes
+            .RunAsync("powercfg.exe", ["/delete", planId.ToString("D")], cancellationToken)
+            .ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"powercfg /delete failed with exit code {result.ExitCode}: {result.StandardError.Trim()}");
+        }
+    }
+
     /// <summary>
     /// Pulls schemes out of <c>powercfg /list</c>. One per line holding a GUID; the name is
     /// whatever sits in brackets, and a trailing <c>*</c> marks the active one.

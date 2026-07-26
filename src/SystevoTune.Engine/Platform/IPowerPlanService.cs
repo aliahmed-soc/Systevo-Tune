@@ -30,6 +30,21 @@ public interface IPowerPlanService
 
     /// <summary>Switches the active scheme.</summary>
     Task SetActiveAsync(Guid planId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Copies <paramref name="source"/> into a scheme with the given id. Used when a PC does not
+    /// list a scheme the profile wants — some OEM images hide High Performance, and Ultimate
+    /// Performance is absent from most consumer installs.
+    /// </summary>
+    /// <returns><c>true</c> if the scheme now exists. <c>false</c> if Windows refused.</returns>
+    /// <remarks>
+    /// The destination id is passed explicitly rather than letting powercfg invent one, so the
+    /// change log can name the scheme before it is created. Doc 05: log first, change second.
+    /// </remarks>
+    Task<bool> TryDuplicateSchemeAsync(Guid source, Guid destination, CancellationToken cancellationToken);
+
+    /// <summary>Removes a scheme. Used by undo to clear up a scheme the engine created.</summary>
+    Task DeleteSchemeAsync(Guid planId, CancellationToken cancellationToken);
 }
 
 /// <summary>Reads the mains/battery state. Behind an interface so tests can pretend to be a laptop.</summary>

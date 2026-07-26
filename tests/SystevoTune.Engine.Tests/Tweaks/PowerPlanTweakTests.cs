@@ -114,7 +114,9 @@ public class PowerPlanTweakTests : IDisposable
         var plan = await Tweak("ultimate-performance").PlanAsync(CancellationToken.None);
 
         Assert.Equal(TweakStatus.NotApplicable, plan.Status);
-        Assert.Contains("not available", plan.Message!, StringComparison.Ordinal);
+        Assert.Contains("could not be found", plan.Message!, StringComparison.Ordinal);
+        // The message names what the PC does have, so the user is not left guessing.
+        Assert.Contains("High performance", plan.Message!, StringComparison.Ordinal);
     }
 
     [Fact]

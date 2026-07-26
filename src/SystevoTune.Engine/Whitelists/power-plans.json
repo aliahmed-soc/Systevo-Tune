@@ -7,8 +7,19 @@
     "  high-performance = GUID_MIN_POWER_SAVINGS  (minimum power SAVINGS, i.e. maximum performance)",
     "  power-saver      = GUID_MAX_POWER_SAVINGS",
     "Ultimate performance is NOT in Microsoft's documented list - still unverified (N1).",
-    "Open question O1: these are documented as scheme PERSONALITIES. A stock install uses them as",
-    "the scheme GUIDs directly, but an OEM image may ship a custom scheme that merely maps to one."
+    "",
+    "O1 (closed 2026-07-27, decision 31): schemes are matched at runtime, never assumed.",
+    "  matchNames - fallback match when an OEM image ships the plan under a different GUID.",
+    "               English names only, so it will not help on a non-English Windows.",
+    "  createFrom - template to copy when the plan is absent entirely, via the documented",
+    "               two-argument powercfg /duplicatescheme.",
+    "  createAs   - the id the copy is created under. This GUID is SYSTEVO-OWNED, not a Windows",
+    "               GUID. Fixed rather than powercfg-generated so the change log can name the",
+    "               scheme before it exists, and undo deletes it by id.",
+    "",
+    "Only high-performance carries a template, on purpose. Ultimate Performance parks fewer cores",
+    "and is a bigger change than a tune-up should invent on a machine that never offered it - so",
+    "Gaming uses Ultimate when present, else High, else creates High. Decision 31."
   ],
   "version": 1,
   "plans": [
@@ -22,13 +33,17 @@
       "id": "high-performance",
       "guid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
       "nameEn": "High performance",
-      "nameAr": "أداء عالي"
+      "nameAr": "أداء عالي",
+      "matchNames": ["High performance", "High Performance"],
+      "createFrom": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+      "createAs": "5b7e1a90-3f2c-4d68-9a41-7c0e2d8b6f31"
     },
     {
       "id": "ultimate-performance",
       "guid": "e9a42b02-d5df-448d-aa00-03f14749eb61",
       "nameEn": "Ultimate performance",
-      "nameAr": "أداء فائق"
+      "nameAr": "أداء فائق",
+      "matchNames": ["Ultimate Performance", "Ultimate performance"]
     },
     {
       "id": "power-saver",

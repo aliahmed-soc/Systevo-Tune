@@ -34,3 +34,22 @@ Choices made without the human present. One line each: what, and why.
 | 28 | GPU scheduling's "not applicable" message reworded | An absent `HwSchMode` means "Windows is deciding", not "unsupported". The old message claimed knowledge we do not have. The conservative behaviour — never invent the value — is unchanged. |
 | 29 | Kept `powershell.exe` rather than `pwsh.exe` for restore points | `Checkpoint-Computer` is documented for Windows PowerShell 5.1 only and is absent from PowerShell 7. This was right by accident; it is now right on purpose, and noted so nobody "modernises" it. |
 | 30 | Game Bar tweak gained **two** values, and its display name dropped "background" | The user authorised adding `AppCaptureEnabled` (O6). Research then found `HistoricalCaptureEnabled` is the precise "Record what happened" lever doc 3.6 asks for, while `AppCaptureEnabled` is broader — it also stops the user recording a clip by hand. Both were added because the tweak was under-delivering without the first and the user asked for the second. The name had to change: calling it "background recording off" while it also kills manual capture would be the kind of quiet overreach doc 01 rules out. The id is unchanged so `gaming.json` still resolves. |
+
+## Session 2 — 2026-07-27
+
+### Human-decided (given to me at the start of session 2)
+
+| # | Decision | Source |
+|---|----------|--------|
+| H1 | **B3 resolved.** Clear only `C:\Windows\SoftwareDistribution\Download`. Stop `wuauserv` and `bits` → delete contents → restart both. If either will not stop cleanly, skip the group with a warning result. Never delete while they run, never force-kill. No undo needed, but log file count and bytes freed. | Human, session 2 brief |
+| H2 | This is the **only** exception to the services rule, and only inside that path. | Human, session 2 brief |
+| H3 | No UI work this session except the optional WPF scaffold. | Human, session 2 brief |
+
+### Made by me
+
+| # | Decision | Why |
+|---|----------|-----|
+| 31 | Power schemes are matched at runtime by GUID, then by name; only High Performance may be created | Closes O1. Microsoft documents the three GUIDs as *personalities* every scheme "maps to", so an OEM image can ship its own id — assuming the GUID would leave the PC on Balanced while reporting success. Creation is limited to High: Ultimate Performance parks fewer cores and is a bigger change than a tune-up should invent on a machine that never offered it. Gaming therefore does Ultimate-if-present → High-if-present → create High. |
+| 32 | A created scheme uses a fixed Systevo-owned GUID from the whitelist, not a powercfg-generated one | `powercfg /duplicatescheme` accepts a destination id (documented). Fixing it is what lets the change log name the scheme *before* it exists — log first, change second — and lets undo delete it by id. |
+| 33 | Undo deletes any scheme the engine created | Doc 07.2 diffs the VM against its snapshot, so a leftover scheme is a bug. Undo's newest-first order does the switch-back before the delete, which matters because Windows refuses to delete the active scheme. |
+| 34 | `FakePowerPlanService` now refuses to activate a scheme it does not hold | Mirrors powercfg. Without it, a bug that activates a scheme we failed to create would pass silently — and it did, until this fake was tightened. |
