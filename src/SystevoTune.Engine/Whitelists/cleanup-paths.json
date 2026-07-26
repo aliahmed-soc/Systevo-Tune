@@ -1,0 +1,41 @@
+{
+  "$comment": [
+    "The ONLY paths cleanup is allowed to touch. Nothing here may be hard-coded in C#.",
+    "Tokens: {USER_TEMP}, {WINDIR}, {SYSTEM_DRIVE}. Anything else is rejected at load time.",
+    "Every path is additionally checked against the forbidden roots in CleanupWhitelist:",
+    "Documents, Desktop, Downloads, the profile root, and bare drive roots are always refused.",
+    "UNVERIFIED: these paths came from model knowledge on 2026-07-26 and are listed in the",
+    "windows-verified-paths skill. Check them before any VM run."
+  ],
+  "version": 1,
+  "groups": [
+    {
+      "id": "temp-files",
+      "nameEn": "Temporary files",
+      "nameAr": "الملفات المؤقتة",
+      "recursive": true,
+      "paths": [
+        "{USER_TEMP}",
+        "{WINDIR}\\Temp"
+      ]
+    },
+    {
+      "id": "windows-update-cache",
+      "nameEn": "Windows Update cache",
+      "nameAr": "ذاكرة تحديثات ويندوز",
+      "recursive": true,
+      "paths": [
+        "{WINDIR}\\SoftwareDistribution\\Download"
+      ]
+    },
+    {
+      "id": "recycle-bin",
+      "nameEn": "Recycle Bin",
+      "nameAr": "سلة المحذوفات",
+      "recursive": true,
+      "paths": [
+        "{SYSTEM_DRIVE}\\$Recycle.Bin"
+      ]
+    }
+  ]
+}

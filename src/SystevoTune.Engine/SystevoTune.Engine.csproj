@@ -13,4 +13,12 @@
     <InternalsVisibleTo Include="SystevoTune.Engine.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Whitelists ship inside the assembly so a user cannot redirect cleanup by dropping a file
+      next to the exe. Editing the repo copy and rebuilding is the only way to change them.
+    -->
+    <EmbeddedResource Include="Whitelists\*.json" />
+  </ItemGroup>
+
 </Project>

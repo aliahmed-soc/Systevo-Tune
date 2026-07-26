@@ -79,6 +79,15 @@ then move the row into the verified tables above with its link and today's date.
 |---|---|---|---|---|
 | U3 | Create a restore point | `powershell.exe -NoProfile -NonInteractive -Command "Checkpoint-Computer -Description '<text>' -RestorePointType MODIFY_SETTINGS"` | Exit 0 on success. Emits a warning containing "already been created" / "within the past" when Windows declines because one was made in the last 24h. | `RestorePointService.CreateAsync` |
 
+### Cleanup paths (`Whitelists/cleanup-paths.json`)
+
+| # | Group | Path | Assumed meaning |
+|---|---|---|---|
+| U6 | temp-files | `{USER_TEMP}` → the user's `AppData\Local\Temp` | Safe to empty. Not one of the forbidden user folders (Documents / Desktop / Downloads). |
+| U7 | temp-files | `{WINDIR}\Temp` | Machine-wide temp. Much of it is locked while Windows runs; the locked-file path handles that. |
+| U8 | windows-update-cache | `{WINDIR}\SoftwareDistribution\Download` | Downloaded update payloads. Windows re-downloads if needed. **Check whether the Windows Update service should be stopped first** — deleting while it runs may be refused or may confuse pending updates. |
+| U9 | recycle-bin | `{SYSTEM_DRIVE}\$Recycle.Bin` | Per-SID bins. Deleting the `$I`/`$R` files frees the space but may leave the shell's view stale until refresh. See decision 11 — `Clear-RecycleBin` is the shell-correct alternative to evaluate in the VM. |
+
 ### Output phrases matched as text
 
 These are string matches against Windows' own messages, so they are locale-sensitive: on a
