@@ -44,9 +44,14 @@ public class CommandLineTests
 
     [Theory]
     [InlineData("apply")]
+    [InlineData("reapply")]
     [InlineData("undo")]
-    public void Apply_and_undo_are_the_commands_that_change_the_machine(string command)
+    public void Apply_reapply_and_undo_are_the_commands_that_change_the_machine(string command)
         => Assert.True(CommandLine.Parse([command]).ChangesTheMachine);
+
+    [Fact]
+    public void Reapply_is_behind_the_same_interlock_as_apply()
+        => Assert.Equal(GuardResult.NeedsVmFlag, CommandLine.Parse(["reapply"]).Check(isElevated: true));
 
     [Theory]
     [InlineData("scan")]

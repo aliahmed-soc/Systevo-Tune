@@ -83,6 +83,21 @@ public sealed class ChangeLogRun
         return record;
     }
 
+    /// <summary>
+    /// Notes which profile this run is applying, so "re-apply the last profile" can find it later
+    /// (doc 5.6 — Windows updates reset tweaks).
+    /// </summary>
+    /// <remarks>
+    /// A record rather than a sidecar file, so a run stays one self-contained file. It carries the
+    /// metadata module, which undo skips entirely: it describes the run, it is not a change.
+    /// </remarks>
+    public ChangeRecord RecordProfile(string profileId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+
+        return RecordChange(ChangeRecord.MetadataModule, "ApplyProfile", profileId, null, profileId, undoable: false);
+    }
+
     /// <summary>The log format stores whole seconds, so drop anything finer before writing.</summary>
     private static DateTime TrimToSeconds(DateTime value)
         => new(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Kind);

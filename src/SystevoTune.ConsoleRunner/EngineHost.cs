@@ -1,3 +1,4 @@
+using SystevoTune.Engine.Bloatware;
 using SystevoTune.Engine.Cleanup;
 using SystevoTune.Engine.Platform;
 using SystevoTune.Engine.Platform.Windows;
@@ -22,15 +23,21 @@ internal sealed class EngineHost
         StartupManager startup,
         ProfileCatalog profiles,
         ProfileBuilder profileBuilder,
+        ProfileApplier profileApplier,
+        ReapplyService reapply,
         IRestorePointService restorePoints,
         IReadOnlyList<IUndoHandler> undoHandlers,
-        IElevation elevation)
+        IElevation elevation,
+        TweakRunner runner)
     {
+        Runner = runner;
         Log = log;
         Cleanup = cleanup;
         Startup = startup;
         Profiles = profiles;
         ProfileBuilder = profileBuilder;
+        ProfileApplier = profileApplier;
+        Reapply = reapply;
         RestorePoints = restorePoints;
         UndoHandlers = undoHandlers;
         Elevation = elevation;
@@ -46,13 +53,17 @@ internal sealed class EngineHost
 
     public ProfileBuilder ProfileBuilder { get; }
 
+    public ProfileApplier ProfileApplier { get; }
+
+    public ReapplyService Reapply { get; }
+
     public IRestorePointService RestorePoints { get; }
 
     public IReadOnlyList<IUndoHandler> UndoHandlers { get; }
 
     public IElevation Elevation { get; }
 
-    public TweakRunner Runner { get; } = new();
+    public TweakRunner Runner { get; }
 
     /// <summary>An undo engine over the shipped handlers.</summary>
     public UndoEngine NewUndoEngine() => new(Log, UndoHandlers);
@@ -69,15 +80,27 @@ internal sealed class EngineHost
         var registryTweaks = RegistryTweakCatalog.Load();
         var cleanup = new CleanupModule(
             CleanupWhitelist.Load(), files, environment, new ScServiceController(processes));
+        var profiles = ProfileCatalog.Load();
+        var builder = new ProfileBuilder(
+            cleanup, registryTweaks, registry, powerPlans, powerPlanCatalog, new SystemBatteryStatus());
+        var log = ChangeLog.Default();
+        var runner = new TweakRunner();
 
         return new EngineHost(
-            ChangeLog.Default(),
+            log,
             cleanup,
             new StartupManager(StartupLocationCatalog.Load(), registry, files, environment),
-            ProfileCatalog.Load(),
-            new ProfileBuilder(cleanup, registryTweaks, registry, powerPlans, powerPlanCatalog, new SystemBatteryStatus()),
+            profiles,
+            builder,
+            new ProfileApplier(builder, runner),
+            new ReapplyService(log, profiles),
             new RestorePointService(registry, processes),
-            [new RegistryUndoHandler(registry), new PowerPlanUndoHandler(powerPlans)],
-            new WindowsElevation());
+            [
+                new RegistryUndoHandler(registry),
+                new PowerPlanUndoHandler(powerPlans),
+                new BloatwareUndoHandler(new PowerShellAppPackageService(processes)),
+            ],
+            new WindowsElevation(),
+            runner);
     }
 }

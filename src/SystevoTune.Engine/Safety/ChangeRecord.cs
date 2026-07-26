@@ -12,6 +12,15 @@ namespace SystevoTune.Engine.Safety;
 /// </remarks>
 public sealed record ChangeRecord
 {
+    /// <summary>
+    /// Module for records that describe the run rather than change the system. Undo skips them:
+    /// there is nothing to put back.
+    /// </summary>
+    public const string MetadataModule = "Run";
+
+    /// <summary>Whether this record describes the run rather than a change to the system.</summary>
+    public bool IsMetadata => Module == MetadataModule;
+
     /// <summary>Unique id, <c>yyyy-MM-dd-NNN</c>. The sequence continues across runs on the same day.</summary>
     [JsonPropertyName("id")]
     public required string Id { get; init; }

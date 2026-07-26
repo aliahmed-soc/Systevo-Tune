@@ -12,4 +12,12 @@ public sealed record RunLog(
     string RunId,
     string FilePath,
     IReadOnlyList<ChangeRecord> Records,
-    int SkippedLineCount);
+    int SkippedLineCount)
+{
+    /// <summary>The profile this run applied, or <c>null</c> if it was not a profile run.</summary>
+    public string? ProfileId => Records
+        .FirstOrDefault(record => record.IsMetadata && record.Action == "ApplyProfile")?.Target;
+
+    /// <summary>Records that actually changed something.</summary>
+    public IReadOnlyList<ChangeRecord> Changes => Records.Where(record => !record.IsMetadata).ToList();
+}

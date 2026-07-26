@@ -44,6 +44,7 @@ internal static class Commands
                 "runs" => ListRuns(host),
                 "preview" => await PreviewAsync(host, line).ConfigureAwait(false),
                 "apply" => await ApplyAsync(host, line).ConfigureAwait(false),
+                "reapply" => await ReapplyAsync(host).ConfigureAwait(false),
                 "undo" => await UndoAsync(host).ConfigureAwait(false),
                 _ => Unknown(line.Command),
             };
@@ -189,10 +190,10 @@ internal static class Commands
         var run = host.Log.StartRun();
         Console.WriteLine($"Run {run.RunId} — log at {run.FilePath}");
 
-        // Built once and reused: rebuilding would hand back fresh tweaks whose LastApply is still
-        // null, so the cleanup detail below would silently print nothing.
-        var tweaks = host.ProfileBuilder.Build(profile);
-        var report = await host.Runner.ApplyAsync(tweaks, run).ConfigureAwait(false);
+        // ProfileApplier notes which profile this was, so `reapply` can find it later.
+        var applied = await host.ProfileApplier.ApplyAsync(profile, run).ConfigureAwait(false);
+        var report = applied.Report;
+        var tweaks = applied.Tweaks;
 
         foreach (var outcome in report.Outcomes)
         {
@@ -224,6 +225,24 @@ internal static class Commands
         }
 
         return report.AllSucceeded ? 0 : 1;
+    }
+
+    /// <summary>Doc 5.6: Windows updates reset tweaks, so run the last profile again.</summary>
+    private static async Task<int> ReapplyAsync(EngineHost host)
+    {
+        var target = host.Reapply.FindLast();
+        if (target is null)
+        {
+            Console.Error.WriteLine("No profile has been applied yet, so there is nothing to re-apply.");
+            return 2;
+        }
+
+        Console.WriteLine(
+            $"Last applied '{target.ProfileId}' in run {target.RunId} "
+            + $"({target.AppliedAt:yyyy-MM-dd HH:mm}, {target.ChangeCount} change(s)).");
+
+        return await ApplyAsync(host, new CommandLine("apply", target.ProfileId, VmConfirmed: true))
+            .ConfigureAwait(false);
     }
 
     private static async Task<int> UndoAsync(EngineHost host)
@@ -313,6 +332,7 @@ internal static class Commands
         Console.WriteLine("  runs                  list logged runs and what is still to undo.");
         Console.WriteLine("  preview <profile>     full dry run: old -> new for every change.");
         Console.WriteLine("  apply <profile> --vm  restore point, then apply. CHANGES THE MACHINE.");
+        Console.WriteLine("  reapply --vm          run the last applied profile again. CHANGES THE MACHINE.");
         Console.WriteLine("  undo --vm             Undo All, newest first. CHANGES THE MACHINE.");
         Console.WriteLine();
         Console.WriteLine($"  apply and undo refuse to run without {CommandLine.VmFlag}. Only ever use them in a VM");

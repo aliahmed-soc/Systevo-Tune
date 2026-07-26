@@ -23,7 +23,7 @@ internal sealed record CommandLine(string Command, string? Argument, bool VmConf
     public const string VmFlag = "--vm";
 
     /// <summary>Commands that write to the system. Everything else only reads.</summary>
-    private static readonly string[] Writing = ["apply", "undo"];
+    private static readonly string[] Writing = ["apply", "reapply", "undo"];
 
     /// <summary>Whether this command would change system state.</summary>
     public bool ChangesTheMachine => Writing.Contains(Command, StringComparer.Ordinal);

@@ -78,7 +78,12 @@ public sealed class UndoEngine
 
     /// <summary>Records still needing undo, newest change first (reverse of write order).</summary>
     private static IEnumerable<(string RunId, ChangeRecord Record)> PendingNewestFirst(RunLog run)
-        => run.Records.Where(record => !record.Undone).Reverse().Select(record => (run.RunId, record));
+        => run.Records
+            // Metadata describes the run; there is nothing to put back, and listing it as
+            // "permanent" would tell the user a profile marker cannot be undone.
+            .Where(record => !record.Undone && !record.IsMetadata)
+            .Reverse()
+            .Select(record => (run.RunId, record));
 
     private async Task<UndoReport> UndoAsync(
         IReadOnlyList<(string RunId, ChangeRecord Record)> targets,
