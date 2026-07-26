@@ -1,0 +1,22 @@
+{
+  "$comment": [
+    "DELIBERATELY EMPTY. The human fills this in.",
+    "",
+    "Each entry sets a service's start type. The engine writes only the Start value under",
+    "HKLM\\SYSTEM\\CurrentControlSet\\Services\\<name>, which takes effect at the next boot and",
+    "never stops a running service mid-session.",
+    "",
+    "Start values: 2 = Automatic, 3 = Manual, 4 = Disabled. The engine refuses 0 and 1",
+    "(Boot and System drivers) outright - those are not tunable.",
+    "",
+    "Shape of an entry:",
+    "  { \"name\": \"SysMain\", \"nameEn\": \"SysMain (Superfetch)\", \"nameAr\": \"...\",",
+    "    \"start\": 3, \"whyEn\": \"one line the user reads before ticking it\" }",
+    "",
+    "Before adding one, verify the service name against Microsoft docs and add it to the",
+    "windows-verified-paths skill. ServiceWhitelist refuses anything matching the forbidden",
+    "list - Defender, firewall, network, audio, printer - whatever this file says."
+  ],
+  "version": 1,
+  "services": []
+}

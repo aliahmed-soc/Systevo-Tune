@@ -154,6 +154,8 @@ Open questions for whoever verifies these:
 | U14 | List power schemes | `powercfg.exe /list` | Exit 0. One line per scheme containing its GUID; the active one ends with `*`. The parser reads only the GUID and the `*`, never the labels, so it survives a non-English Windows. |
 | U15 | Switch power scheme | `powercfg.exe /setactive <guid>` | Exit 0 on success. |
 | U16 | Mains or battery | `kernel32!GetSystemPowerStatus` | `AcLineStatus` 0 = on battery, 1 = plugged in, 255 = unknown. `BatteryFlag & 128` = no system battery. Struct layout in `SystemBatteryStatus`. |
+| U29 | Installed and free RAM | `kernel32!GlobalMemoryStatusEx` | `MEMORYSTATUSEX` layout in `WindowsSystemMetrics`. `dwLength` must be set before the call. |
+| U30 | Service start type | `HKLM\SYSTEM\CurrentControlSet\Services\<name>::Start` | DWORD. `0` boot, `1` system, `2` automatic, `3` manual, `4` disabled. Writing it changes the *next* boot and never stops a running service. |
 
 ### Output phrases matched as text
 
