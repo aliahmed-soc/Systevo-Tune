@@ -1,182 +1,188 @@
-# Session Report — autonomous build, 2026-07-26 → 27
+# Session Report — autonomous build session 2, 2026-07-27
 
-All 12 tasks are done. **Build clean, 0 warnings. 245 tests, 0 failures.**
+**Build clean, 0 warnings. 365 tests, 0 failures.** Nothing ran against the dev machine.
 
-Nothing has run on any machine. That is the single most important line in this report: the
-engine is complete and internally consistent, and it is entirely unproven against real Windows.
+Tasks 1–8 done. Task 9 (WPF scaffold) deliberately not started — see the end.
 
 ---
 
-## 1. What was built
+## 1. Done
 
 | # | Task | Commit |
 |---|------|--------|
-| 0 | Solution, project `CLAUDE.md`, three skills | `63b44ba` `cd272b2` |
-| 1 | ChangeLog — JSONL, one file per run, written before the change | `8dc4f14` |
-| 2 | UndoEngine — Undo All / per-run / per-item, partial failure | `8dc4f14` |
-| 3 | RestorePointService + the platform abstraction layer | `2e20f6b` |
-| 4 | Dry-run framework — `ITweak`, `TweakRunner` | `87554c3` |
-| 5 | Cleanup module — scan first, whitelist, user-folder guard | `8c3e0b7` |
-| 6 | Power plan switch + undo | `3a02496` |
-| 7+8 | Visual effects, Game Mode, Game Bar, GPU scheduling | `939ee89` |
-| 9 | Startup manager — list, disable, enable, never delete | `1ff4bbe` |
-| 10 | Gaming and Work profiles | `60e5168` |
-| 11 | ConsoleRunner — scan, preview, apply, undo | `ba666f6` |
-| 12 | Services support (empty whitelist) + metrics | `c013199` |
+| 1 | O1 closed — power schemes resolved at runtime, never assumed | `c2aa4db` |
+| 2 | O2–O5 closed | `c280620` |
+| 3 | B3 implemented as you decided | `4994a55` |
+| 4 | Session-1 leftovers — only B1 remains, and it needs you | — |
+| 5 | Privacy module | `6542392` |
+| 6 | Bloatware remover engine | `b222333` |
+| 7 | Re-apply last profile | `708ac0f` |
+| 8 | **VM verification harness + checklist** | `0a5c9a5` |
 
-**No NuGet package was added.** The only ones in the repo are the xUnit test template's.
+Still no NuGet package beyond the xUnit test template.
 
-### The two structural decisions worth knowing
+### The five guards that are mutation-checked
 
-**Preview is enforced by construction, not by discipline.** `ITweak` splits into `PlanAsync`
-(reads only) and `ApplyChangeAsync` (applies one already-planned change). The only caller of
-`ApplyChangeAsync` is `TweakRunner.ApplyAsync`, which writes the log record first. A tweak has
-no code path to the system that skips the log. Adding a tweak that forgets to log is not a
-mistake you can make.
+Each was deliberately broken, the failures observed, and the break reverted:
 
-**Cleanup deletions are marked `undoable: false`.** They are genuinely permanent. Without that
-flag, Undo All would either report them as failures — wrong, nothing failed — or silently claim
-to have restored them. Instead `UndoReport.Permanent` lists them so the user is told plainly
-what Undo cannot bring back. This is the one field added beyond doc 5.2's example record; it
-defaults to `true`, so any record written without it still reads correctly.
-
----
-
-## 2. Test count and what was actually proven
-
-245 tests. Green tests prove nothing unless they can fail, so the four guards that carry the
-safety promise were mutation-checked — each was deliberately broken, the failures observed, and
-the break reverted:
-
-| Guard | Tests that fail when it is disabled |
+| Guard | Tests that fail without it |
 |---|---|
 | Undo walks newest-first | 2 |
 | Undo continues past a failing step | 1 |
 | Cleanup refuses user folders | 9 |
 | Services forbidden list | 10 |
+| Update-cache service exception stays scoped | 5 |
 
-The cleanup one plants a `thesis.docx` in Documents and asserts nothing outside the whitelist
-is ever passed to delete.
+### Three real bugs found while building
 
-**What tests cannot prove:** every path, GUID, service name, and command below. Those are
-assertions about Windows, and only Windows can settle them.
+1. **`FakePowerPlanService` was too permissive.** Tightening it to refuse activating a scheme it
+   does not hold immediately exposed a live bug: after a failed scheme creation, the tweak went on
+   to activate a scheme that was never made.
+2. **`apply` built the profile twice.** The cleanup summary read fresh tweak instances whose
+   `LastApply` was still null, so cleanup detail had never actually printed.
+3. **`BloatwareUndoHandler` was written but never registered.** Undoing an app removal would have
+   reported "no undo handler registered".
 
 ---
 
-## 3. UNVERIFIED — 30 items you must check before anything runs
+## 2. Your decisions, as implemented
 
-Full detail with assumed semantics is in `.claude/skills/windows-verified-paths/SKILL.md`.
-Every one came from model knowledge, exactly as rule 3 anticipated. None is presented as fact.
+**H1/H2 — the update cache.** Stop `wuauserv` and `bits`, delete, restart both. A service that
+will not stop skips the group with a warning; nothing is force-killed. A refusal puts back whatever
+was already stopped. The restart runs in a `finally` with `CancellationToken.None`, so a cancelled
+or throwing delete still brings the services back. A service that will not *restart* is a loud
+failure, not a warning — leaving Windows Update down is worse than not cleaning.
 
-### Start with these three — they carry real risk
+The "only exception" is **enforced, not trusted**: `CleanupWhitelist` refuses at load time any
+group but `windows-update-cache` naming `stopServices`, and any service but those two. Adding
+`"stopServices": ["WinDefend"]` to the JSON gets a refusal, not a disabled Defender.
 
-| # | Item | Why it matters |
+The group stays out of both profiles (decision 23). Your brief resolved *how* to clean it, not
+whether a preset should do it unasked — say the word and I will add it.
+
+**H3 — no UI.** Honoured.
+
+---
+
+## 3. All six open questions are closed
+
+| # | Was | Now |
 |---|---|---|
-| **U8** | `{WINDIR}\SoftwareDistribution\Download` | Deleting while the Windows Update service is running may be refused, or may confuse a pending update. Check whether the service should be stopped first. This is the one cleanup path that could plausibly break something. |
-| **U22** | `HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR::AllowGameDVR` | Writes a **policy** key. Confirm this is the right lever and that it does not leave Group Policy in a state the user cannot undo through the normal Windows UI. A policy the user cannot clear is worse than the setting we were trying to change. |
-| **U27** | Startup approvals for the all-users folder | The whitelist assumes these live under **HKCU**. If they are actually under HKLM, disabling an all-users startup item will silently do nothing. |
-
-### The rest
-
-- **U1–U5** restore point: `RPSessionInterval`, `DisableSR`, the `Checkpoint-Computer` command,
-  and the English output phrases matched as text. Those phrases will not match on a non-English
-  Windows — doc 07.4 lists that as a required case, and the result falls through to `Failed`.
-- **U6, U7, U9** cleanup paths: user temp, `{WINDIR}\Temp`, `$Recycle.Bin`.
-- **U10–U13** power scheme GUIDs. Doc 5.2's own worked example uses Balanced → High
-  Performance, which matches U10 → U11 — corroboration from your plan, not from Microsoft.
-- **U14–U16** `powercfg /list`, `powercfg /setactive`, `GetSystemPowerStatus`.
-- **U17–U23** registry tweak values. U17–U19 carry a second open question: setting
-  `VisualFXSetting` alone may not repaint until Explorer restarts. Check whether
-  `SystemParametersInfo` is needed, and whether `UserPreferencesMask` also has to move.
-- **U24–U28** startup locations and the approval-value shape. Two more open questions there:
-  the exact flag semantics beyond `0x02`/`0x03`, and whether the approval key for a folder item
-  includes the `.lnk` extension.
-- **U29, U30** `GlobalMemoryStatusEx` layout, and the service `Start` value.
+| O1 | Scheme GUIDs assumed | Resolved at runtime: exact GUID → a scheme we created → by name. High Performance can be copied from its template; undo deletes the copy. Ultimate is never invented. |
+| O2 | Active scheme read from a `*` in undocumented output | `powercfg /getactivescheme`, a documented option |
+| O3 | Restore-point verdict from English prose | Counted with `Get-ComputerRestorePoint`. An Arabic-prose test asserts the verdict still lands. |
+| O4 | "Not available on this PC" claimed knowledge we lacked | Absent means Windows is deciding; the message says so |
+| O5 | Two undocumented registry reads were the authority | Demoted to a hint; the counts decide |
+| O6 | `AppCaptureEnabled` missing | Added, along with `HistoricalCaptureEnabled` |
 
 ---
 
-## 4. Blocked
+## 4. What is still UNVERIFIED
 
-**B1 — boot time metric.** Not built. It needs the `System.Diagnostics.EventLog` package to
-read event 100 from the Diagnostics-Performance log; `TickCount64` gives uptime, which is a
-different thing and would be dishonest to label as boot time. Adding the project's first real
-dependency for an optional metric was not a call to make without you. Three options and a
-recommendation are in `BLOCKED.md`. The other two metrics — freed space, startup app count —
-are done and tested.
+Full detail in `.claude/skills/windows-verified-paths/SKILL.md`. **`docs/VM-CHECKLIST.md` maps
+every one to the exact command that proves it.**
 
-**B2 — path verification.** Section 3 above. Not a blocker for the build; a blocker for running
-anything.
+**Verified against Microsoft docs (14):** power scheme GUIDs V1–V3, `powercfg /list` and
+`/setactive`, `Checkpoint-Computer` and its once-a-day message, `SYSTEM_POWER_STATUS`,
+`MEMORYSTATUSEX`, service `Start` values, `AllowGameDVR`, `AllowTelemetry`.
 
-Nothing else is blocked. `docs/DECISIONS.md` holds 22 decisions made alone, each with its
-reason.
+**Undocumented by Microsoft (24):** N1–N24. Visual effects, Game Mode, Game Bar, GPU scheduling,
+startup approvals, System Restore detection, ContentDeliveryManager, the Ultimate Performance
+GUID, cleanup paths, and the bloatware package names. Microsoft publishes no reference for any of
+it — that is the finding, not a gap in searching.
 
----
+### The three that carry real risk
 
-## 5. Your next steps
+1. **N12 — all-users startup approvals.** The whitelist pairs the `ProgramData` Startup folder
+   with **HKLM**. If it is actually HKCU, disabling an all-users startup item silently does
+   nothing. Checklist step 1 has the exact experiment.
+2. **N18–N23 — the `SubscribedContent-NNNNNN` ids.** Opaque Microsoft content numbers, the least
+   trustworthy entries in the whole project. They can change between Windows builds; a stale id
+   quietly does nothing. Toggle each Settings switch and see which id moves.
+3. **N24 — bloatware package names.** Currently harmless because nothing is approved, but confirm
+   each with `Get-AppxPackage` before flipping any `approved` flag.
 
-### Step 1 — verify the paths
+### Two edition caveats worth carrying
 
-Work through `.claude/skills/windows-verified-paths/SKILL.md`. U8, U22, U27 first. As each is
-confirmed, move its row into the verified tables at the top of that file with its Microsoft docs
-link and the date. That file is the anti-hallucination gate; it only works if it stays honest.
-
-### Step 2 — decide B1, and fill the services whitelist if you want it
-
-`Whitelists/services.json` ships **empty on purpose** — doc 3.3 wants services *known* safe to
-move to Manual, and only you can build that list. The file header documents the entry shape.
-The forbidden-list guard refuses Defender, firewall, network, audio, printing, and the sign-in
-services whatever you write in it.
-
-### Step 3 — VM snapshot, then the doc 07.2 undo test
-
-Take the snapshot **before** the first command. Everything below runs inside the VM, elevated.
-
-Read-only, safe to run anywhere:
-
-```bash
-dotnet run --project src/SystevoTune.ConsoleRunner -- scan
-```
-
-```bash
-dotnet run --project src/SystevoTune.ConsoleRunner -- preview gaming
-```
-
-Then the doc 07.2 cycle. `apply` and `undo` **refuse to run without `--vm`** — a deliberate
-speed bump so a mistyped command on your desktop does nothing at all:
-
-```bash
-dotnet run --project src/SystevoTune.ConsoleRunner -- apply gaming --vm
-```
-
-```bash
-dotnet run --project src/SystevoTune.ConsoleRunner -- undo --vm
-```
-
-```bash
-dotnet run --project src/SystevoTune.ConsoleRunner -- runs
-```
-
-Then compare the VM against its snapshot: power plan, the touched registry keys, startup items.
-Any difference is a bug. Doc 07.2 is the authority on what to compare.
-
-**Expect this in the undo output, and it is correct:** the deleted temp files are reported as
-permanent and not restored. Everything else should go back exactly.
-
-**One thing the harness does that the WPF app must not.** When a restore point cannot be
-created, `apply` prints that doc 5.1 requires asking the user, and continues anyway so the VM
-test can run unattended. There is no user in a headless harness. The Phase 3 app has to stop and
-ask. It is called out in the code, in `DECISIONS.md` as decision 22, and here.
+`AllowGameDVR` and `AllowTelemetry` both list Pro/Enterprise/Education/IoT and **not Home**. On a
+Home VM expect them to do nothing. Home is a very common gaming PC.
 
 ---
 
-## 6. Honest assessment
+## 5. Blocked
 
-What I am confident in: the safety layer. Log-before-change is structural rather than a
-convention, undo ordering and partial failure are mutation-tested, and the two destructive
-guards — user folders and forbidden services — both bite when removed.
+**B1 — boot time metric.** Unchanged; your brief did not cover it. Needs the
+`System.Diagnostics.EventLog` package to read event 100. My recommendation is still to drop it or
+show uptime instead — boot time varies too much between boots to make a decent before/after claim.
+Freed space and startup app count are the honest numbers.
 
-What I am not confident in: every single Windows path. That is not modesty, it is the thing
-doc 09 warned about in writing — "any AI model can invent a registry key that looks real but is
-not". I have flagged all 30 rather than quietly shipping them, which is the most the rules allow
-me to do without you. Until they are checked, treat the engine as a well-tested piece of
-software that may be aimed at the wrong targets.
+**B2/B3 — resolved.** B3 by you; B2 by the documentation pass.
+
+Nothing else is blocked. `docs/DECISIONS.md` holds 39 decisions plus your three.
+
+---
+
+## 6. Your next actions
+
+### 1. Review `docs/DECISIONS.md`
+
+Decisions 31–39 are this session's. The four worth your eye:
+
+- **31** — Gaming does Ultimate-if-present → High-if-present → *create High*. Ultimate is never
+  invented: it parks fewer cores and is a bigger change than a tune-up should make on a machine
+  that never offered it. Disagree and it is a one-line whitelist change.
+- **38** — the telemetry tweak writes `1` (required only), not `0`, and is named to match, because
+  Microsoft says `0` is Enterprise-only and behaves as `1` everywhere else.
+- **39** — privacy leaves the Spotlight *wallpaper* alone and removes only the overlay advert.
+- **23** — the update cache is still out of both profiles.
+
+### 2. Work through `docs/VM-CHECKLIST.md` steps 0–2
+
+All read-only. Step 0 records the VM's edition, which several assumptions depend on.
+
+### 3. VM snapshot, then run `verify`
+
+```bash
+dotnet run --project src/SystevoTune.ConsoleRunner -- verify gaming --vm
+```
+
+Snapshot → apply → snapshot → Undo All → snapshot → diff, in one command. Exit code **0 and
+`PASS`** is doc 07.2 satisfied. Artifacts land in
+`C:\ProgramData\SystevoTune\verify\<run>-<profile>\`: three JSON snapshots and a Markdown report.
+
+Two things to expect and not misread:
+
+- **`INCONCLUSIVE`** (exit 2) means the profile changed nothing, so nothing was proved. Roll back
+  to a clean snapshot rather than treating it as a pass.
+- Deleted temp files appear under **"Permanent by design"**. Correct, not a failure.
+
+Then repeat for `work`, and do the manual half the harness cannot: reboot and confirm the settings
+survive, and that Windows Update still works after the cache cleanup.
+
+### 4. Then, if you want them
+
+- Fill `Whitelists/services.json` — ships empty by design.
+- Flip `approved: true` on bloatware entries you have confirmed and want gone.
+- Decide B1.
+
+---
+
+## 7. Honest assessment
+
+**Stronger than last session in one specific way:** the engine no longer assumes. O1 was the bug
+class that would have bitten hardest — a tweak reporting success while silently doing nothing —
+and closing it forced the same defensive shape everywhere else: match at runtime, read numbers not
+words, count things rather than parse prose, and say plainly when we cannot tell.
+
+**The `verify` command is the real deliverable.** Doc 07.2 was a manual procedure nobody would run
+consistently. It is now one command with an exit code, and it refuses to report a false pass when
+nothing was applied.
+
+**What I am still not confident in:** the 24 undocumented values. That is unchanged, and no amount
+of further research will fix it — Microsoft does not publish them. The VM is the only thing that
+can settle it, which is why the checklist is written the way it is. Until then, treat this as
+well-tested software that may be aimed at some wrong targets.
+
+**Task 9, the WPF scaffold, was not started.** Tasks 1–8 took the session, and 8 was the stated
+priority. Starting a UI project I could not finish and test would have left the repo in a worse
+state than not starting it, so I stopped at a clean, green, fully committed point instead.
