@@ -2,7 +2,10 @@
   "$comment": [
     "The Gaming preset from docs/03-features-core.md. Steps run in this order.",
     "Every id here must exist in the matching whitelist file, or the profile fails to load.",
-    "Startup apps are deliberately absent - see docs/DECISIONS.md decision 17."
+    "Startup apps are deliberately absent - see docs/DECISIONS.md decision 17.",
+    "windows-update-cache is deliberately absent - see decision 23. Microsoft's own reset",
+    "procedure stops wuauserv and BITS before touching that folder, and a staged update awaiting",
+    "restart may be deletable but still needed. The group stays available for explicit ticking."
   ],
   "id": "gaming",
   "nameEn": "Gaming",
@@ -11,7 +14,6 @@
   "descriptionAr": "أقصى سرعة. مؤثرات أقل، خطة طاقة أسرع، وخصائص الألعاب مفعّلة.",
   "steps": [
     { "kind": "cleanup", "id": "temp-files" },
-    { "kind": "cleanup", "id": "windows-update-cache" },
     { "kind": "cleanup", "id": "recycle-bin" },
     { "kind": "powerPlan", "preferred": ["ultimate-performance", "high-performance"] },
     { "kind": "registry", "id": "visual-effects.performance" },

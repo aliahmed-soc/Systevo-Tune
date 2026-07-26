@@ -14,6 +14,8 @@ public class StartupManagerTests : IDisposable
     private const string ApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private const string StartupFolder = @"C:\FakeUsers\tester\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup";
 
+    private static readonly DateTimeOffset Noon = new(2026, 7, 26, 14, 0, 0, TimeSpan.Zero);
+
     private readonly TempLogDirectory _directory = new();
     private readonly FakeRegistryService _registry = new();
     private readonly FakeFileSystem _files = new();
@@ -22,7 +24,8 @@ public class StartupManagerTests : IDisposable
     private readonly TweakRunner _runner = new();
 
     public StartupManagerTests()
-        => _manager = new StartupManager(StartupLocationCatalog.Load(), _registry, _files, _environment);
+        => _manager = new StartupManager(
+            StartupLocationCatalog.Load(), _registry, _files, _environment, new FixedClock(Noon));
 
     public void Dispose() => _directory.Dispose();
 
@@ -172,19 +175,37 @@ public class StartupManagerTests : IDisposable
     }
 
     [Fact]
-    public void Switching_a_flag_keeps_windows_own_timestamp_bytes()
+    public void An_approval_value_is_twelve_bytes()
+        => Assert.Equal(12, StartupManager.BuildApprovedValue(StartupState.Disabled, Noon).ToBytes().Length);
+
+    [Fact]
+    public void Disabling_stamps_the_filetime_windows_records_the_disable_time_in()
     {
-        var existing = RegistryValue.Binary([0x02, 0, 0, 0, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22]);
+        var bytes = StartupManager.BuildApprovedValue(StartupState.Disabled, Noon).ToBytes();
 
-        var disabled = StartupManager.BuildApprovedValue(existing, StartupState.Disabled);
-
-        Assert.Equal(0x03, disabled.ToBytes()[0]);
-        Assert.Equal([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22], disabled.ToBytes()[4..]);
+        Assert.Equal(0x03, bytes[0]);
+        Assert.Equal(Noon.ToFileTime(), BitConverter.ToInt64(bytes, 4));
     }
 
     [Fact]
-    public void A_missing_flag_becomes_a_fresh_twelve_byte_value()
-        => Assert.Equal(12, StartupManager.BuildApprovedValue(null, StartupState.Disabled).ToBytes().Length);
+    public void Enabling_writes_a_zero_filetime_because_there_is_no_disable_time()
+    {
+        var bytes = StartupManager.BuildApprovedValue(StartupState.Enabled, Noon).ToBytes();
+
+        Assert.Equal(0x02, bytes[0]);
+        Assert.Equal(0, BitConverter.ToInt64(bytes, 4));
+    }
+
+    [Fact]
+    public void The_flag_byte_0x06_is_read_as_enabled()
+    {
+        // Documented alongside 0x02 as an enabled marker. Reading it as disabled would make the
+        // engine believe an item that still runs is already switched off.
+        _registry.With(Run("OneDrive"), RegistryValue.Text(@"C:\OneDrive.exe"));
+        _registry.With(Approved("OneDrive"), RegistryValue.Binary([0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+
+        Assert.Equal(StartupState.Enabled, Assert.Single(_manager.List()).State);
+    }
 
     // ---- undo ----
 

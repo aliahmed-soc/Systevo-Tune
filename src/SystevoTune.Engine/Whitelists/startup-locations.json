@@ -1,7 +1,10 @@
 {
   "$comment": [
     "Where Windows keeps startup items, and where it records whether each one is enabled.",
-    "UNVERIFIED: model knowledge, 2026-07-26. Listed in windows-verified-paths as U24-U28.",
+    "STILL UNVERIFIED against Microsoft docs, because Microsoft does not document StartupApproved",
+    "anywhere. Corrected 2026-07-27 from DFIR and Sysinternals-community sources - see U24-U28 in",
+    "the windows-verified-paths skill. The all-users Startup folder now pairs with HKLM, not HKCU,",
+    "and the 32-bit Run key was missing entirely. Both still need confirming in the VM.",
     "The engine NEVER writes to a Run key or deletes a shortcut. It only writes the matching",
     "StartupApproved value, which is the same mechanism Task Manager uses. Doc 3.2: disable,",
     "never delete."
@@ -29,6 +32,16 @@
       "approvedKey": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run"
     },
     {
+      "id": "run-all-users-wow64",
+      "nameEn": "Startup apps (all users, 32-bit)",
+      "nameAr": "تطبيقات بدء التشغيل (كل المستخدمين، 32-بت)",
+      "kind": "RegistryRun",
+      "root": "HKLM",
+      "key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "approvedRoot": "HKLM",
+      "approvedKey": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run32"
+    },
+    {
       "id": "startup-folder-current-user",
       "nameEn": "Startup folder (this user)",
       "nameAr": "مجلد بدء التشغيل (هذا المستخدم)",
@@ -43,8 +56,8 @@
       "nameAr": "مجلد بدء التشغيل (كل المستخدمين)",
       "kind": "StartupFolder",
       "folder": "{PROGRAMDATA}\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
-      "approvedRoot": "HKCU",
-      "approvedKey": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\StartupFolder"
+      "approvedRoot": "HKLM",
+      "approvedKey": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\StartupFolder"
     }
   ]
 }

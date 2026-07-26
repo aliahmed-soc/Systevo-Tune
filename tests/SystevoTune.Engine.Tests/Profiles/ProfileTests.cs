@@ -73,12 +73,36 @@ public class ProfileTests : IDisposable
     [Fact]
     public void Steps_become_tweaks_in_file_order()
     {
-        var tweaks = Builder().Build(_profiles.Find("gaming")!);
+        var tweaks = Builder().Build(_profiles.Find("gaming")!).Select(tweak => tweak.Id).ToList();
 
-        Assert.StartsWith("cleanup.", tweaks[0].Id, StringComparison.Ordinal);
-        Assert.Equal("power-plan.ultimate-performance", tweaks[3].Id);
-        Assert.Equal("visual-effects.performance", tweaks[4].Id);
+        Assert.Equal(
+            [
+                "cleanup.temp-files",
+                "cleanup.recycle-bin",
+                "power-plan.ultimate-performance",
+                "visual-effects.performance",
+                "game-mode.on",
+                "game-bar.background-recording-off",
+                "gpu-scheduling.on",
+            ],
+            tweaks);
     }
+
+    [Fact]
+    public void No_preset_cleans_the_windows_update_cache()
+    {
+        // Decision 23. Microsoft's documented reset stops wuauserv and BITS before touching that
+        // folder, and a staged update awaiting restart can be deletable but still needed. The
+        // group stays in the whitelist for explicit ticking; no preset does it blindly.
+        foreach (var profile in _profiles.Profiles)
+        {
+            Assert.DoesNotContain("cleanup.windows-update-cache", Builder().Build(profile).Select(tweak => tweak.Id));
+        }
+    }
+
+    [Fact]
+    public void The_update_cache_group_is_still_available_to_tick_by_hand()
+        => Assert.NotNull(CleanupWhitelist.Load().Find("windows-update-cache"));
 
     [Fact]
     public void The_gaming_preset_matches_the_doc_3_summary_table()

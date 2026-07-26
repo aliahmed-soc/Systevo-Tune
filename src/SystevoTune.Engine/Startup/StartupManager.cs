@@ -20,13 +20,19 @@ public sealed class StartupManager(
     StartupLocationCatalog catalog,
     IRegistryService registry,
     IFileSystemService files,
-    IEnvironmentPaths environment)
+    IEnvironmentPaths environment,
+    TimeProvider? timeProvider = null)
 {
-    /// <summary>Length of a StartupApproved value. Byte 0 is the flag; the rest is a timestamp.</summary>
+    /// <summary>
+    /// A StartupApproved value is 12 bytes: a 4-byte flag DWORD, then an 8-byte FILETIME holding
+    /// when the item was disabled. Enabled entries carry a zero FILETIME.
+    /// </summary>
     private const int ApprovedValueLength = 12;
 
     private const byte EnabledFlag = 0x02;
     private const byte DisabledFlag = 0x03;
+
+    private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
     /// <summary>Everything that starts with Windows, across every whitelisted location.</summary>
     public IReadOnlyList<StartupItem> List(CancellationToken cancellationToken = default)
@@ -87,6 +93,12 @@ public sealed class StartupManager(
     /// Reads the approval flag. A missing value means Windows has never been told otherwise,
     /// which is enabled.
     /// </summary>
+    /// <remarks>
+    /// Known flag bytes are <c>0x02</c> and <c>0x06</c> for enabled and <c>0x03</c> for disabled.
+    /// The low bit separates them, and testing it rather than matching the three known values
+    /// keeps an unknown-but-even flag on the safe side: reported as enabled, so the engine offers
+    /// to disable it rather than silently believing it is already off.
+    /// </remarks>
     internal StartupState ReadState(StartupLocation location, string itemName)
     {
         var value = registry.GetValue(location.ApprovedRef(itemName));
@@ -100,18 +112,30 @@ public sealed class StartupManager(
     }
 
     /// <summary>
-    /// Builds the approval value for a state, keeping the timestamp bytes of whatever is already
-    /// there so switching an item off and on again does not lose Windows' own bookkeeping.
+    /// Builds the approval value for a state: the flag, then the FILETIME Windows uses to record
+    /// when an item was switched off. Enabling writes a zero FILETIME, because there is no
+    /// disable time to record.
     /// </summary>
-    internal static RegistryValue BuildApprovedValue(RegistryValue? current, StartupState target)
+    /// <remarks>
+    /// An earlier version carried the existing timestamp across, which was wrong — it would have
+    /// stamped a re-disabled item with the time it was disabled the first time.
+    /// </remarks>
+    internal static RegistryValue BuildApprovedValue(StartupState target, DateTimeOffset now)
     {
-        var bytes = current?.Type is RegistryValueType.Binary && current.ToBytes().Length >= ApprovedValueLength
-            ? current.ToBytes()
-            : new byte[ApprovedValueLength];
-
+        var bytes = new byte[ApprovedValueLength];
         bytes[0] = target is StartupState.Disabled ? DisabledFlag : EnabledFlag;
+
+        if (target is StartupState.Disabled)
+        {
+            BitConverter.TryWriteBytes(bytes.AsSpan(4), now.ToFileTime());
+        }
+
         return RegistryValue.Binary(bytes);
     }
+
+    /// <summary>The approval value for a state, stamped with the current time.</summary>
+    internal RegistryValue BuildApprovedValue(StartupState target)
+        => BuildApprovedValue(target, _time.GetLocalNow());
 
     internal RegistryValue? ReadApproved(StartupLocation location, string itemName)
         => registry.GetValue(location.ApprovedRef(itemName));
@@ -153,7 +177,7 @@ public sealed class StartupItemTweak(
             RegistryTweak.SetAction,
             reference.ToString(),
             existing?.ToLogValue(),
-            StartupManager.BuildApprovedValue(existing, target).ToLogValue(),
+            manager.BuildApprovedValue(target).ToLogValue(),
             $"Startup: {Describe(target)} {item.Name}. The entry stays in place and can be switched back.");
 
         return Task.FromResult(TweakPlan.Ready(Id, Name, [change]));

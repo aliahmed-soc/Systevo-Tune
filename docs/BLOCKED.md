@@ -35,11 +35,45 @@ test template.
 My recommendation is **2 or 3**. Boot time varies enormously between boots on the same machine,
 so it makes a poor before/after claim even when measured properly.
 
+## B3 — How should the Windows Update cache be cleaned? (needs your call)
+
+**Found during verification on 2026-07-27.** The path is right; our method is not.
+
+Microsoft's [documented reset](https://learn.microsoft.com/en-us/troubleshoot/windows-client/installing-updates-features-roles/additional-resources-for-windows-update)
+stops `bits`, `wuauserv`, and `cryptsvc` before touching `SoftwareDistribution`, and **renames**
+`Download` rather than deleting it. We delete file-by-file with nothing stopped, which is both
+ineffective (most of it is locked, so freed size will not match scanned size — doc 7.3 checks
+exactly that) and risky (a staged update awaiting restart can have unlocked files that are still
+needed; locked-file handling does not save us there).
+
+**Interim action taken:** the group is out of both profiles (decision 23) so nothing does it
+blindly. It is still in the whitelist and can be ticked deliberately.
+
+**Your options:**
+
+1. **Stop `wuauserv` + `bits`, delete, restart them.** Matches Microsoft's procedure. Costs us a
+   service-control dependency and a new undo path (restart the services), and touches a service —
+   worth checking against golden rule 4, though Windows Update is not on the forbidden list.
+2. **Refuse to clean when an update is pending a restart, otherwise clean as now.** Safer than
+   today with no service control, but still leaves most of the folder locked.
+3. **Drop the group.** Temp files and the Recycle Bin are the honest wins; the update cache
+   refills itself anyway.
+
+My recommendation is **1 if you want the space, 3 if you want the simplicity.** Option 2 gets the
+risk down but keeps the "size shown ≠ size freed" problem, which is the one doc 7.3 will fail on.
+
 ## B2 — Verification of every Windows path is still outstanding
 
-Not a blocker for the build — a blocker for running anything. 28 items sit under
-**UNVERIFIED** in `.claude/skills/windows-verified-paths/SKILL.md` (U1–U28). They came from
-model knowledge, exactly as rule 3 anticipated, and are flagged rather than presented as fact.
+Not a blocker for the build — a blocker for running anything. Items sit under **UNVERIFIED** in
+`.claude/skills/windows-verified-paths/SKILL.md`. They came from model knowledge, exactly as
+rule 3 anticipated, and are flagged rather than presented as fact.
 
-Nothing has run on any machine, so none of them has been proven. See `SESSION-REPORT.md` for
-the ordered list and the three that carry real risk.
+**Progress on 2026-07-27:** the three highest-risk items were checked against Microsoft docs.
+
+- **U22 (GameDVR policy) — verified and moved to the verified table.** Correct as written.
+- **U8 (update cache) — path right, method wrong.** Became B3 above.
+- **U27 (startup approvals) — assumption wrong, corrected in code.** Microsoft does not document
+  `StartupApproved` at all, so it cannot be settled from docs; it needs an empirical check in the
+  VM. The correction came from DFIR and Sysinternals-community sources.
+
+The rest (U1–U7, U9–U21, U23–U26, U28–U31) are untouched and still need checking.

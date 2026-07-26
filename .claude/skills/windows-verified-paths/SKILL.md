@@ -30,10 +30,26 @@ tester's PC. There is no acceptable workaround:
 
 ## Registry paths
 
-_None verified yet._
-
 | Purpose | Hive | Key path | Value name | Type | Docs | Verified |
 |---|---|---|---|---|---|---|
+| Block Game Recording and Broadcasting | HKLM | `SOFTWARE\Policies\Microsoft\Windows\GameDVR` | `AllowGameDVR` | REG_DWORD | [ApplicationManagement Policy CSP](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement) | 2026-07-27 |
+
+### AllowGameDVR — confirmed details
+
+Was U22. Microsoft documents this exactly, as a Group Policy-backed MDM policy.
+
+- **Values:** `0` = not allowed, `1` = allowed. **Default is `1`.**
+- **Scope:** Device only (hence HKLM). Not a per-user policy.
+- **Group Policy:** Computer Configuration → Windows Components → Windows Game Recording and
+  Broadcasting → "Enables or disables Windows Game Recording and Broadcasting". ADMX file
+  `GameDVR.admx`.
+- **Editions:** Pro, Enterprise, Education, IoT Enterprise. **Windows Home is not listed.**
+  Treat the tweak as possibly unenforced on Home — which is a common gaming PC edition.
+- Microsoft's own note: "The policy is only enforced in Windows 10 for desktop." Confirm
+  behaviour on Windows 11 during the VM run.
+- **Reversibility is fine.** Setting it writes a policy value that greys out the user-facing
+  Game Bar setting while present. Our undo restores the previous value, or deletes it when the
+  tweak created it, which returns Group Policy to "Not configured". No trap.
 
 ## Service names
 
@@ -85,8 +101,42 @@ then move the row into the verified tables above with its link and today's date.
 |---|---|---|---|
 | U6 | temp-files | `{USER_TEMP}` → the user's `AppData\Local\Temp` | Safe to empty. Not one of the forbidden user folders (Documents / Desktop / Downloads). |
 | U7 | temp-files | `{WINDIR}\Temp` | Machine-wide temp. Much of it is locked while Windows runs; the locked-file path handles that. |
-| U8 | windows-update-cache | `{WINDIR}\SoftwareDistribution\Download` | Downloaded update payloads. Windows re-downloads if needed. **Check whether the Windows Update service should be stopped first** — deleting while it runs may be refused or may confuse pending updates. |
+| U8 | windows-update-cache | `{WINDIR}\SoftwareDistribution\Download` | **Path confirmed, procedure confirmed wrong — see below.** |
 | U9 | recycle-bin | `{SYSTEM_DRIVE}\$Recycle.Bin` | Per-SID bins. Deleting the `$I`/`$R` files frees the space but may leave the shell's view stale until refresh. See decision 11 — `Clear-RecycleBin` is the shell-correct alternative to evaluate in the VM. |
+
+#### U8 — checked 2026-07-27, and our approach was wrong
+
+The **path is right**. Microsoft names `%Systemroot%\SoftwareDistribution\Download` in
+[Additional resources for Windows Update](https://learn.microsoft.com/en-us/troubleshoot/windows-client/installing-updates-features-roles/additional-resources-for-windows-update).
+
+The **procedure is not**. Microsoft's documented reset stops three services first:
+
+```
+net stop bits
+net stop wuauserv
+net stop cryptsvc
+```
+
+and then **renames** `Download` to `Download.bak` rather than deleting it — and only as an
+escalation step, explicitly not the first thing to try. The lighter documented reset is
+`net stop wuauserv`, `rd /s /q %systemroot%\SoftwareDistribution`, `net start wuauserv` — still
+stopping the service first.
+
+Our cleanup module deletes file-by-file with nothing stopped. Two consequences:
+
+1. **Ineffective.** Most of the cache is locked while `wuauserv` and BITS run, so the freed size
+   will fall well short of the scanned size. Doc 7.3 asks for "size shown ≈ size actually freed";
+   this group would fail that check.
+2. **Genuinely risky.** A staged update awaiting a restart may have files that are *not* locked
+   but *are* still needed. Deleting those is how "deleting mid-update corrupts the install"
+   happens. Locked-file handling does not protect against this case.
+
+**Action taken:** `windows-update-cache` was removed from both the Gaming and Work profiles
+(decision 23), so no preset touches it. The group stays in the whitelist and can still be ticked
+deliberately, which matches doc 3.1's "user ticks what to clean".
+
+**Still to decide (see BLOCKED.md B3):** whether to stop/start `wuauserv` + `bits` around the
+delete, check for a pending restart first, or drop the group entirely.
 
 ### Power scheme GUIDs (`Whitelists/power-plans.json`)
 
@@ -109,7 +159,7 @@ That is corroboration from the project's own plan, not a Microsoft source — st
 | U19 | Visual effects | `HKCU\Control Panel\Desktop\WindowMetrics::MinAnimate` | REG_SZ | `"0"` off. Note it is a string, not a DWORD. |
 | U20 | Game Mode | `HKCU\Software\Microsoft\GameBar::AutoGameModeEnabled` | DWORD | `1` on. |
 | U21 | Game Bar recording | `HKCU\System\GameConfigStore::GameDVR_Enabled` | DWORD | `0` off. |
-| U22 | Game Bar recording | `HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR::AllowGameDVR` | DWORD | `0` off by policy. |
+| ~~U22~~ | Game Bar recording | **VERIFIED 2026-07-27 — moved to the verified table at the top.** | | |
 | U23 | GPU scheduling | `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers::HwSchMode` | DWORD | `2` on, `1` off. Needs a restart (doc 3.6). Treated as NotApplicable when the value is absent, so the engine never invents it on unsupported hardware. |
 
 Open questions for whoever verifies these:
@@ -117,9 +167,9 @@ Open questions for whoever verifies these:
 - **U17–U19**: setting `VisualFXSetting` alone may not repaint until Explorer restarts or the user
   signs out. Check whether a `SystemParametersInfo` call is needed for the change to show
   immediately, and whether `UserPreferencesMask` also has to move.
-- **U22** writes a policy key under HKLM. Confirm this is the right lever rather than a per-user
-  setting, and that it does not leave Group Policy in a state the user cannot change back through
-  the normal UI.
+- **U22** answered: it is the documented lever, it is device-scope by design, and undo returns
+  Group Policy to "Not configured". The one caveat worth carrying forward is that Windows **Home**
+  is absent from the supported-editions list.
 
 ### Startup locations (`Whitelists/startup-locations.json`)
 
@@ -127,25 +177,60 @@ The engine **never writes a Run value or deletes a shortcut**. It writes only th
 `StartupApproved` value, which is the mechanism Task Manager uses, so Windows' own UI shows the
 item as disabled rather than missing. Doc 3.2: disable, never delete.
 
-| # | Purpose | Ref |
-|---|---|---|
-| U24 | Run, this user | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (read only) |
-| U25 | Run, all users | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run` (read only) |
-| U26 | Approval flags for Run | `…\CurrentVersion\Explorer\StartupApproved\Run` under the matching root |
-| U27 | Approval flags for folder items | `HKCU\…\Explorer\StartupApproved\StartupFolder` |
-| U28 | Startup folders | `{APPDATA}\Microsoft\Windows\Start Menu\Programs\Startup` and the `{PROGRAMDATA}` equivalent |
+**Microsoft does not document `StartupApproved` anywhere.** That is the finding, not a gap in
+searching: it has no Policy CSP entry, no reference page, and no supported API. Everything below
+comes from DFIR and Sysinternals-community sources, which is a step better than model guesswork
+but is *not* the Microsoft confirmation these entries were waiting for. Treat U24–U28 as
+**still unverified** and settle them empirically in the VM.
 
-Assumed value shape for U26/U27: REG_BINARY, 12 bytes. Byte 0 is the flag — `0x02` enabled,
-`0x03` disabled; the engine tests `byte0 & 0x01`. Bytes 4–11 look like a timestamp and are
-preserved when the flag is flipped.
+| # | Purpose | Ref | Status |
+|---|---|---|---|
+| U24 | Run, this user | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (read only) | uncontested |
+| U25 | Run, all users | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run` (read only) | uncontested |
+| U26 | Approval flags for Run | `…\CurrentVersion\Explorer\StartupApproved\Run` under the matching root | uncontested |
+| U27 | Approval flags for folder items | `StartupApproved\StartupFolder` **under both HKLM and HKCU** | **corrected 2026-07-27** |
+| U28 | Startup folders | `{APPDATA}\…\Start Menu\Programs\Startup` and the `{PROGRAMDATA}` equivalent | uncontested |
+| U31 | 32-bit Run on 64-bit Windows | `HKLM\SOFTWARE\WOW6432Node\…\Run`, approvals at `StartupApproved\Run32` | **added 2026-07-27** |
 
-Open questions for whoever verifies these:
+#### U27 — the original assumption was wrong
 
-- Confirm the flag semantics, especially whether any value other than `0x02`/`0x03` appears.
-- Confirm that the all-users Startup folder's approvals really live under **HKCU** (U27) rather
-  than HKLM. The whitelist currently assumes HKCU for both folder locations.
-- Confirm the approval key name for a folder item is the shortcut's file name **including** the
-  `.lnk` extension.
+The whitelist paired **both** Startup folders with HKCU approvals. Sources agree
+`StartupApproved\StartupFolder` exists under **HKLM as well as HKCU**, and the natural pairing
+follows the Run keys: all-users location → HKLM approvals, per-user location → HKCU approvals.
+
+Had this shipped, disabling an all-users Startup-folder item would have written to the wrong
+hive and silently done nothing — the exact failure mode flagged as the risk. The whitelist now
+pairs `{PROGRAMDATA}` with HKLM.
+
+**Confirm in the VM:** put a shortcut in the all-users Startup folder, disable it in Task
+Manager, and check which hive gained the value.
+
+#### U26/U27 value shape — corrected
+
+REG_BINARY, 12 bytes: a 4-byte flag DWORD, then an **8-byte FILETIME recording when the item was
+disabled**.
+
+| Flag byte | Meaning |
+|---|---|
+| `0x02` | Enabled |
+| `0x06` | Enabled |
+| `0x03` | Disabled |
+
+The engine tests `byte0 & 0x01`, which gives the right answer for all three and errs toward
+"enabled" for an unknown even flag — the safe side, since it means offering to disable something
+rather than believing it is already off. A test now pins `0x06`.
+
+The engine previously **carried the existing timestamp bytes across** when flipping the flag.
+That was wrong: it would stamp a re-disabled item with the time it was first disabled. It now
+writes a fresh FILETIME on disable and zeros on enable.
+
+**Still open:** whether the approval key for a folder item includes the `.lnk` extension. The
+engine assumes it does.
+
+Source for the byte layout:
+[Windows Incident Response — "Does Autostart Really Mean Autostart?"](http://windowsir.blogspot.com/2022/07/does-autostart-really-mean-autostart.html).
+Sysinternals [Autoruns](https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns) reads
+these keys and is the closest thing to a Microsoft-published implementation.
 
 ### Commands and native calls
 
