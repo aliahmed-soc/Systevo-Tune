@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SystevoTune.Engine\SystevoTune.Engine.csproj" />
     <ProjectReference Include="..\..\src\SystevoTune.ConsoleRunner\SystevoTune.ConsoleRunner.csproj" />
+    <ProjectReference Include="..\SystevoTune.TestSupport\SystevoTune.TestSupport.csproj" />
   </ItemGroup>
 
 </Project>

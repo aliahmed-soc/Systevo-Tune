@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>SystevoTune.TestSupport</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Shared test doubles. Both the Engine tests and the App's ViewModel tests need the same
+      Fakes, and rule 2 says tests use Fakes only — duplicating them per test project would let
+      the two copies drift, which is how a test ends up passing against a fake that no longer
+      behaves like the real thing.
+    -->
+    <ProjectReference Include="..\..\src\SystevoTune.Engine\SystevoTune.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

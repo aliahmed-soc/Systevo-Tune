@@ -2,7 +2,7 @@ using SystevoTune.Engine.Cleanup;
 using SystevoTune.Engine.Metrics;
 using SystevoTune.Engine.Platform;
 using SystevoTune.Engine.Startup;
-using SystevoTune.Engine.Tests.Fakes;
+using SystevoTune.TestSupport;
 
 namespace SystevoTune.Engine.Tests.Metrics;
 

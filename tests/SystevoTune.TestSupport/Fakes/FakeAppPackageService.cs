@@ -1,11 +1,11 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
 /// In-memory Store apps. No unit test runs Get-AppxPackage or removes anything real.
 /// </summary>
-internal sealed class FakeAppPackageService : IAppPackageService
+public sealed class FakeAppPackageService : IAppPackageService
 {
     private readonly Dictionary<string, AppPackage> _installed = new(StringComparer.OrdinalIgnoreCase);
 

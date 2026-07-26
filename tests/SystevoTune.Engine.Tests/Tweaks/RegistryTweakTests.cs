@@ -1,7 +1,6 @@
 using SystevoTune.Engine.Platform;
 using SystevoTune.Engine.Safety;
-using SystevoTune.Engine.Tests.Fakes;
-using SystevoTune.Engine.Tests.Safety;
+using SystevoTune.TestSupport;
 using SystevoTune.Engine.Tweaks;
 using SystevoTune.Engine.Tweaks.Registry;
 

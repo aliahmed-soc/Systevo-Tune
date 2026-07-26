@@ -1,12 +1,12 @@
 using SystevoTune.Engine.Safety;
 
-namespace SystevoTune.Engine.Tests.Safety;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
-/// A throwaway log directory under the system temp folder. Never C:\ProgramData —
+/// A throwaway log directory under the system temp folder. Never C:\ProgramData â€”
 /// tests must not touch the real log location or any real system state.
 /// </summary>
-internal sealed class TempLogDirectory : IDisposable
+public sealed class TempLogDirectory : IDisposable
 {
     public TempLogDirectory()
     {
@@ -34,7 +34,7 @@ internal sealed class TempLogDirectory : IDisposable
 }
 
 /// <summary>A clock that only moves when a test moves it. Local time is UTC so ids are stable.</summary>
-internal sealed class FixedClock(DateTimeOffset now) : TimeProvider
+public sealed class FixedClock(DateTimeOffset now) : TimeProvider
 {
     private DateTimeOffset _now = now;
 
@@ -46,7 +46,7 @@ internal sealed class FixedClock(DateTimeOffset now) : TimeProvider
 }
 
 /// <summary>Stands in for the machine: target name to current value. Nothing here touches Windows.</summary>
-internal sealed class FakeSystem
+public sealed class FakeSystem
 {
     private readonly Dictionary<string, string?> _values = new(StringComparer.Ordinal);
 
@@ -56,7 +56,7 @@ internal sealed class FakeSystem
 }
 
 /// <summary>Restores old values into a <see cref="FakeSystem"/> and remembers the order it was asked.</summary>
-internal sealed class FakeUndoHandler(FakeSystem system, string module = "Fake") : IUndoHandler
+public sealed class FakeUndoHandler(FakeSystem system, string module = "Fake") : IUndoHandler
 {
     private readonly List<string> _undoneIds = [];
 

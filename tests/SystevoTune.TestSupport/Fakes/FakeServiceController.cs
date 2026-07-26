@@ -1,11 +1,11 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
 /// In-memory services. No unit test stops or starts a real one.
 /// </summary>
-internal sealed class FakeServiceController : IWindowsServiceController
+public sealed class FakeServiceController : IWindowsServiceController
 {
     private readonly Dictionary<string, ServiceState> _states = new(StringComparer.OrdinalIgnoreCase);
 

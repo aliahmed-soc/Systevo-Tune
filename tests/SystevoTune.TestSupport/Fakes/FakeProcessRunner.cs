@@ -1,11 +1,11 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
 /// Stands in for running an external program. No unit test may start a real process.
 /// </summary>
-internal sealed class FakeProcessRunner : IProcessRunner
+public sealed class FakeProcessRunner : IProcessRunner
 {
     private ProcessResult _result = new(0, string.Empty, string.Empty);
     private Exception? _failure;

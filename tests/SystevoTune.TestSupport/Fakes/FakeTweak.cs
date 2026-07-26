@@ -1,12 +1,12 @@
 using SystevoTune.Engine.Tweaks;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
 /// A tweak with no system behind it. Records what it was asked to apply, and can be told to
 /// fail at plan time or on a named target.
 /// </summary>
-internal sealed class FakeTweak(string id, string module = "Fake") : ITweak
+public sealed class FakeTweak(string id, string module = "Fake") : ITweak
 {
     private readonly List<PlannedChange> _applied = [];
 

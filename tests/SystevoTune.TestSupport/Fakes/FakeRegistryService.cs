@@ -1,11 +1,11 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
 /// An in-memory registry. The only registry any unit test is allowed to touch.
 /// </summary>
-internal sealed class FakeRegistryService : IRegistryService
+public sealed class FakeRegistryService : IRegistryService
 {
     private readonly Dictionary<string, RegistryValue> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _keys = new(StringComparer.OrdinalIgnoreCase);
@@ -61,7 +61,7 @@ internal sealed class FakeRegistryService : IRegistryService
 
     /// <summary>
     /// Refs whose delete throws while writes still succeed. Models an undo that cannot remove a
-    /// value the engine created — the apply works, the rollback does not.
+    /// value the engine created â€” the apply works, the rollback does not.
     /// </summary>
     public HashSet<string> FailingDeletes { get; } = new(StringComparer.OrdinalIgnoreCase);
 

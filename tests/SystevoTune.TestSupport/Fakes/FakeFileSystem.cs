@@ -1,12 +1,12 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>
-/// An in-memory disk. The only file system any unit test is allowed to touch — nothing here
+/// An in-memory disk. The only file system any unit test is allowed to touch â€” nothing here
 /// reaches a real path.
 /// </summary>
-internal sealed class FakeFileSystem : IFileSystemService
+public sealed class FakeFileSystem : IFileSystemService
 {
     private readonly Dictionary<string, long> _files = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
@@ -93,7 +93,7 @@ internal sealed class FakeFileSystem : IFileSystemService
 }
 
 /// <summary>Windows locations pointed at made-up absolute paths. Nothing real is touched.</summary>
-internal sealed class FakeEnvironmentPaths : IEnvironmentPaths
+public sealed class FakeEnvironmentPaths : IEnvironmentPaths
 {
     public string UserTemp { get; init; } = @"C:\FakeUsers\tester\AppData\Local\Temp";
 

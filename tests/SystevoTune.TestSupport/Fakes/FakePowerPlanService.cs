@@ -1,9 +1,9 @@
 using SystevoTune.Engine.Platform;
 
-namespace SystevoTune.Engine.Tests.Fakes;
+namespace SystevoTune.TestSupport;
 
 /// <summary>In-memory power schemes. No unit test runs powercfg.</summary>
-internal sealed class FakePowerPlanService : IPowerPlanService
+public sealed class FakePowerPlanService : IPowerPlanService
 {
     private readonly List<PowerPlan> _plans = [];
 
@@ -89,7 +89,7 @@ internal sealed class FakePowerPlanService : IPowerPlanService
 }
 
 /// <summary>A battery state a test can set.</summary>
-internal sealed class FakeBatteryStatus(BatteryState state = BatteryState.NoBattery) : IBatteryStatus
+public sealed class FakeBatteryStatus(BatteryState state = BatteryState.NoBattery) : IBatteryStatus
 {
     public BatteryState Current { get; set; } = state;
 }
