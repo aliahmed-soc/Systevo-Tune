@@ -80,7 +80,9 @@ public sealed class PowerPlanTweak : ITweak
             .ToList();
 
         var available = await _powerPlans.ListAsync(cancellationToken).ConfigureAwait(false);
-        var active = available.FirstOrDefault(plan => plan.IsActive)?.Id;
+
+        // Asked for directly rather than inferred from the list's formatting — see O2.
+        var active = await _powerPlans.GetActiveAsync(cancellationToken).ConfigureAwait(false);
 
         // Never assume a GUID exists (O1). Walk the preference list against what this PC really
         // has, matching by id and then by name.

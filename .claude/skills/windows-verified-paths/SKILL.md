@@ -224,39 +224,33 @@ method wrong. See B3 in `docs/BLOCKED.md`.
 
 ---
 
-# Tier 3 — Open questions the documentation raised
+# Tier 3 — Open questions
 
-These are not missing paths. They are behavioural questions that only the VM can answer.
+All six are now closed in code. What remains is empirical confirmation in the VM, which is what
+`docs/VM-CHECKLIST.md` is for.
 
-**O1 — Scheme personalities are not the same as schemes.** The three verified GUIDs are
-documented as `GUID_POWERSCHEME_PERSONALITY` values, and Microsoft says "All power schemes map to
-one of these personalities". On a stock install the built-in schemes use these GUIDs directly,
-but an OEM image may ship a custom scheme with its own GUID that merely *maps* to a personality.
-If so, our exact-GUID match would report `NotApplicable` on that PC. **Check `powercfg /list` on
-a real OEM laptop.** If this bites, `powercfg /setactive SCHEME_MIN` using the documented alias
-mechanism (`powercfg /aliases`) would sidestep GUIDs entirely.
+**O1 — CLOSED 2026-07-27 (decision 31).** Scheme personalities are not the same as schemes: an
+OEM image can ship its own GUID that merely maps to a documented personality, and assuming the
+GUID would have left such a PC on Balanced while reporting success. Schemes are now resolved at
+runtime — exact GUID, then a scheme this engine created earlier, then by name. When nothing
+matches, High Performance is copied from its template via the documented two-argument
+`powercfg /duplicatescheme`, and undo deletes the copy. Ultimate Performance is deliberately
+never invented. *VM check: `powercfg /list` on a real OEM laptop.*
 
-**O2 — `powercfg /list` output format is undocumented.** Our parser is deliberately
-locale-independent, but nothing guarantees the `*` marker. `powercfg /getactivescheme` is a
-documented option that returns the active scheme directly and would be more robust than inferring
-it from the list.
+**O2 — CLOSED 2026-07-27 (decision 35).** The active scheme now comes from the documented
+`powercfg /getactivescheme` rather than a trailing `*` in undocumented `/list` output.
 
-**O3 — The restore-point phrase match is English-only.** V9 is the English message. On a
-non-English Windows it will not match and the result falls through to `Failed` instead of
-`Skipped`. Doc 07.4 lists non-English Windows as a required test case. `Get-ComputerRestorePoint`
-is a documented cmdlet that could confirm a recent point exists without parsing prose.
+**O3 + O5 — CLOSED 2026-07-27 (decision 36).** The restore-point outcome is decided by counting
+points before and after with the documented `Get-ComputerRestorePoint`, not by matching English
+prose. Counting behaves identically on an Arabic Windows, which doc 07.4 requires. N8 and N9 drop
+to a hint for the early warning; the counts are the authority.
 
-**O4 — GPU scheduling: "absent" does not mean "unsupported".** N7 says a missing `HwSchMode`
-means the system decides — the default state on a supported PC. Our `requiresExistingValue` flag
-reports `NotApplicable` when the value is absent, so on a HAGS-capable machine at default
-settings we would wrongly say the feature is unavailable. The conservative behaviour is right
-(we never invent the value), but the message was misleading and has been reworded. **Decide in
-the VM** whether to detect support properly instead.
+**O4 — CLOSED 2026-07-27 (decision 37).** An absent `HwSchMode` stays `NotApplicable` and the
+message now says the setting is simply not recorded, rather than claiming the hardware cannot do
+it. Writing the value would be creating a setting rather than changing one. *VM check: whether
+HAGS-capable machines at default settings really do lack the value.*
 
-**O5 — Restore-point detection reads two undocumented values (N8, N9).** Microsoft documents
-`Get-ComputerRestorePoint`, `Enable-ComputerRestore`, and `Disable-ComputerRestore`. Attempting
-`Checkpoint-Computer` and interpreting the result — or querying with the documented cmdlet —
-would replace both undocumented registry reads with supported API surface. Worth doing.
+**O6 — CLOSED 2026-07-27 (decision 30).** Both Game Bar capture values added.
 
 **O6 — RESOLVED 2026-07-27.** The user authorised adding the missing values, which is the
 approval golden rule 5 asks for. Research then found **two** values rather than one, with

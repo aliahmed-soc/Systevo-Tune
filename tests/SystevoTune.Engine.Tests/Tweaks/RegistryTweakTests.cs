@@ -137,6 +137,21 @@ public class RegistryTweakTests : IDisposable
     }
 
     [Fact]
+    public async Task An_absent_gpu_scheduling_value_is_not_claimed_to_be_unsupported()
+    {
+        // O4: an absent HwSchMode means Windows is choosing for itself, which is the default on a
+        // perfectly capable PC. The engine still refuses to invent the value — writing it would
+        // be creating a setting rather than changing one — but the message must not pretend to
+        // know the hardware cannot do it.
+        var preview = await _runner.PreviewAsync([Tweak("gpu-scheduling.on")]);
+
+        var message = Assert.Single(preview.Plans).Message!;
+        Assert.Contains("no setting recorded", message, StringComparison.Ordinal);
+        Assert.Contains("Windows' own default", message, StringComparison.Ordinal);
+        Assert.Empty(_registry.Writes);
+    }
+
+    [Fact]
     public async Task Gpu_scheduling_needs_a_restart_when_it_can_run()
     {
         _registry.With(Ref("gpu-scheduling.on", 0), RegistryValue.Dword(1));

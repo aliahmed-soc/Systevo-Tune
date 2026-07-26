@@ -11,32 +11,30 @@ namespace SystevoTune.Engine.Safety;
 /// Depends only on <see cref="IRegistryService"/> and <see cref="IProcessRunner"/>, so all of its
 /// decision-making is unit tested with fakes. Nothing here runs during a test.
 /// <para>
-/// Registry paths and the PowerShell command are listed in the windows-verified-paths skill under
-/// UNVERIFIED. They must be checked against Microsoft docs before any VM run.
+/// Closes open questions O3 and O5. The outcome is decided by <b>counting restore points before
+/// and after</b> using the documented <c>Get-ComputerRestorePoint</c> cmdlet, not by matching
+/// Windows' English prose. Counting works identically on an Arabic Windows, which doc 07.4
+/// requires. The old phrase match survives only as a fallback for the message.
 /// </para>
 /// </remarks>
 public sealed class RestorePointService(IRegistryService registry, IProcessRunner processes) : IRestorePointService
 {
-    /// <summary>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore — UNVERIFIED.</summary>
+    /// <summary>Marker the script emits so we parse our own output, never Windows'.</summary>
+    internal const string ResultMarker = "SYSTEVO_RP;";
+
+    /// <summary>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore — undocumented (N8).</summary>
     internal static readonly RegistryValueRef SessionInterval = new(
         RegistryRoot.LocalMachine,
         @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore",
         "RPSessionInterval");
 
-    /// <summary>HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore — UNVERIFIED.</summary>
+    /// <summary>HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore — undocumented (N9).</summary>
     internal static readonly RegistryValueRef DisabledByPolicy = new(
         RegistryRoot.LocalMachine,
         @"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore",
         "DisableSR");
 
-    /// <summary>Phrases Windows uses when it declines because it made a point recently.</summary>
-    private static readonly string[] FrequencyLimitPhrases =
-    [
-        "already been created",
-        "within the past",
-    ];
-
-    /// <summary>Phrases Windows uses when System Restore is switched off.</summary>
+    /// <summary>Phrases Windows uses when System Restore is switched off. English only, best effort.</summary>
     private static readonly string[] DisabledPhrases =
     [
         "system restore is disabled",
@@ -45,16 +43,18 @@ public sealed class RestorePointService(IRegistryService registry, IProcessRunne
     ];
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A hint, not an authority. Both values it reads are undocumented (N8, N9), so a wrong answer
+    /// here must never be the only thing standing between the user and a restore point. The real
+    /// outcome comes from <see cref="CreateAsync"/> counting points.
+    /// </remarks>
     public bool IsSystemRestoreEnabled()
     {
-        // Policy wins: DisableSR = 1 switches System Restore off for the whole machine.
         if (ReadDword(DisabledByPolicy) == 1)
         {
             return false;
         }
 
-        // RPSessionInterval = 0 means restore point creation is switched off.
-        // A missing value is the default state, which is enabled.
         return ReadDword(SessionInterval) != 0;
     }
 
@@ -90,20 +90,44 @@ public sealed class RestorePointService(IRegistryService registry, IProcessRunne
                 ex.Message);
         }
 
-        var output = result.AllOutput;
+        return Interpret(description, result.AllOutput, result.ExitCode);
+    }
 
-        // Microsoft documents the 24-hour limit as an error, not a warning, but a PowerShell
-        // non-terminating error does not reliably set a non-zero exit code. Match the text first
-        // so the outcome is right either way.
-        if (Mentions(output, FrequencyLimitPhrases))
+    /// <summary>
+    /// Works out what happened from the before/after counts. Language-independent by design.
+    /// </summary>
+    internal static RestorePointResult Interpret(string description, string output, int exitCode)
+    {
+        var counts = ParseCounts(output);
+
+        if (counts is var (before, after))
         {
+            if (after > before)
+            {
+                return new RestorePointResult(RestorePointStatus.Created, $"Restore point created: {description}");
+            }
+
+            // Nothing new, but points exist — this is Windows' once-a-day limit. The user still
+            // has something to roll back to, so it is a warning rather than a failure.
+            if (before > 0)
+            {
+                return new RestorePointResult(
+                    RestorePointStatus.Skipped,
+                    $"Windows did not create a new restore point because it made one recently. "
+                    + $"{before.ToString(CultureInfo.InvariantCulture)} restore point(s) already exist, "
+                    + "so there is still something to roll back to.",
+                    output.Trim());
+            }
+
+            // No points before, none after: nothing to fall back on.
             return new RestorePointResult(
-                RestorePointStatus.Skipped,
-                "Windows did not create a new restore point because it made one recently. "
-                + "An earlier restore point should still be available.",
+                RestorePointStatus.Failed,
+                "Windows did not create a restore point, and this PC has none from earlier.",
                 output.Trim());
         }
 
+        // The script did not report counts at all, so Get-ComputerRestorePoint itself failed.
+        // That usually means System Restore is off despite what the registry hinted.
         if (Mentions(output, DisabledPhrases))
         {
             return new RestorePointResult(
@@ -112,29 +136,79 @@ public sealed class RestorePointService(IRegistryService registry, IProcessRunne
                 output.Trim());
         }
 
-        if (result.ExitCode != 0)
+        return new RestorePointResult(
+            RestorePointStatus.Failed,
+            $"Windows could not create a restore point (exit code {exitCode.ToString(CultureInfo.InvariantCulture)}).",
+            output.Trim());
+    }
+
+    /// <summary>Reads the <c>SYSTEVO_RP;before=N;after=M</c> line the script emits.</summary>
+    internal static (int Before, int After)? ParseCounts(string output)
+    {
+        if (output is null)
         {
-            return new RestorePointResult(
-                RestorePointStatus.Failed,
-                $"Windows could not create a restore point (exit code {result.ExitCode.ToString(CultureInfo.InvariantCulture)}).",
-                output.Trim());
+            return null;
         }
 
-        return new RestorePointResult(RestorePointStatus.Created, $"Restore point created: {description}");
+        foreach (var line in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var marker = line.IndexOf(ResultMarker, StringComparison.Ordinal);
+            if (marker < 0)
+            {
+                continue;
+            }
+
+            var parts = line[(marker + ResultMarker.Length)..].Split(';', StringSplitOptions.RemoveEmptyEntries);
+            var before = FindCount(parts, "before=");
+            var after = FindCount(parts, "after=");
+
+            if (before is not null && after is not null)
+            {
+                return (before.Value, after.Value);
+            }
+        }
+
+        return null;
+    }
+
+    private static int? FindCount(string[] parts, string prefix)
+    {
+        foreach (var part in parts)
+        {
+            if (part.StartsWith(prefix, StringComparison.Ordinal)
+                && int.TryParse(part.AsSpan(prefix.Length), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
-    /// <c>MODIFY_SETTINGS</c> is the restore point type for a settings change, which is what a
-    /// tune-up run is.
+    /// Counts restore points, tries to create one, counts again, and reports both numbers.
     /// </summary>
-    internal static IReadOnlyList<string> BuildArguments(string description) =>
-    [
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        $"Checkpoint-Computer -Description '{description.Replace("'", "''", StringComparison.Ordinal)}' "
-        + "-RestorePointType MODIFY_SETTINGS",
-    ];
+    /// <remarks>
+    /// <c>MODIFY_SETTINGS</c> is the restore point type for a settings change, which is what a
+    /// tune-up run is. <c>Get-ComputerRestorePoint</c> and <c>Checkpoint-Computer</c> are both
+    /// documented Windows PowerShell 5.1 cmdlets — do not switch this to <c>pwsh.exe</c>
+    /// (decision 29).
+    /// </remarks>
+    internal static IReadOnlyList<string> BuildArguments(string description)
+    {
+        var safe = description.Replace("'", "''", StringComparison.Ordinal);
+
+        // SilentlyContinue so a failed Checkpoint-Computer still lets the second count run:
+        // the counts are what decide the outcome, not the error.
+        var script =
+            "$ErrorActionPreference='SilentlyContinue'; "
+            + "$before=@(Get-ComputerRestorePoint).Count; "
+            + $"Checkpoint-Computer -Description '{safe}' -RestorePointType MODIFY_SETTINGS; "
+            + "$after=@(Get-ComputerRestorePoint).Count; "
+            + $"Write-Output ('{ResultMarker}before=' + $before + ';after=' + $after)";
+
+        return ["-NoProfile", "-NonInteractive", "-Command", script];
+    }
 
     private int? ReadDword(RegistryValueRef reference)
     {

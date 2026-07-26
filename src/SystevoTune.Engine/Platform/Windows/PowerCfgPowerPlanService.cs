@@ -31,10 +31,32 @@ public sealed partial class PowerCfgPowerPlanService(IProcessRunner processes) :
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Uses <c>/getactivescheme</c>, which is a documented option that returns the active scheme
+    /// directly. Closes open question O2: the output format of <c>/list</c> is undocumented, so
+    /// inferring the active scheme from a trailing <c>*</c> was a guess about formatting. A GUID
+    /// is a GUID in every language.
+    /// </remarks>
     public async Task<Guid?> GetActiveAsync(CancellationToken cancellationToken)
     {
-        var plans = await ListAsync(cancellationToken).ConfigureAwait(false);
-        return plans.FirstOrDefault(plan => plan.IsActive)?.Id;
+        var result = await processes
+            .RunAsync("powercfg.exe", ["/getactivescheme"], cancellationToken)
+            .ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"powercfg /getactivescheme failed with exit code {result.ExitCode}: {result.StandardError.Trim()}");
+        }
+
+        return ParseFirstGuid(result.StandardOutput);
+    }
+
+    /// <summary>The first GUID anywhere in the text, or <c>null</c>. Labels are never read.</summary>
+    internal static Guid? ParseFirstGuid(string output)
+    {
+        var match = PlanLine().Match(output ?? string.Empty);
+        return match.Success ? Guid.Parse(match.Groups["guid"].Value) : null;
     }
 
     /// <inheritdoc />
