@@ -13,4 +13,9 @@
     <ProjectReference Include="..\SystevoTune.Engine\SystevoTune.Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The VM-flag interlock is a safety feature, so it is unit tested rather than run. -->
+    <InternalsVisibleTo Include="SystevoTune.Engine.Tests" />
+  </ItemGroup>
+
 </Project>
