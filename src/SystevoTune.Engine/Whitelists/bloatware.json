@@ -1,0 +1,79 @@
+{
+  "$comment": [
+    "Preloaded apps that MAY be removed. Doc 3.8.",
+    "",
+    "EVERY ENTRY SHIPS approved:false. The module builds no tweak for an unapproved entry, so",
+    "this file removes nothing until a human flips the flag. Two gates on purpose: the list is",
+    "'what could go', approved is 'a person actually agreed'.",
+    "",
+    "UNVERIFIED: these package names came from model knowledge on 2026-07-27 and are listed in",
+    "the windows-verified-paths skill as N24. Confirm each with Get-AppxPackage in the VM before",
+    "approving it - a name that no longer exists simply does nothing, but a wrong one is worse.",
+    "",
+    "Undo is BEST EFFORT and usually fails. Re-registering a removed package needs its original",
+    "files, which removal often takes with it; after that only the Microsoft Store can help. The",
+    "preview says so and the undo failure says so. Do not approve anything here casually.",
+    "",
+    "BloatwareWhitelist refuses at load time anything that is part of Windows itself - the Store,",
+    "Windows Security, the shell hosts, the framework packages - whatever this file says."
+  ],
+  "version": 1,
+  "packages": [
+    {
+      "name": "Microsoft.BingNews",
+      "nameEn": "Microsoft News",
+      "nameAr": "أخبار مايكروسوفت",
+      "approved": false,
+      "whyEn": "News feed app. Widgets may still show news after removal."
+    },
+    {
+      "name": "Microsoft.BingWeather",
+      "nameEn": "MSN Weather",
+      "nameAr": "طقس MSN",
+      "approved": false,
+      "whyEn": "Weather app. The taskbar widget is separate."
+    },
+    {
+      "name": "Microsoft.GetHelp",
+      "nameEn": "Get Help",
+      "nameAr": "الحصول على المساعدة",
+      "approved": false,
+      "whyEn": "Support chat app. Some Windows troubleshooters link into it."
+    },
+    {
+      "name": "Microsoft.Getstarted",
+      "nameEn": "Tips",
+      "nameAr": "تلميحات",
+      "approved": false,
+      "whyEn": "The Windows tips app."
+    },
+    {
+      "name": "Microsoft.MicrosoftSolitaireCollection",
+      "nameEn": "Solitaire Collection",
+      "nameAr": "مجموعة سوليتير",
+      "approved": false,
+      "whyEn": "Card games. Genuinely a game - check nobody plays it."
+    },
+    {
+      "name": "Microsoft.Microsoft3DViewer",
+      "nameEn": "3D Viewer",
+      "nameAr": "عارض ثلاثي الأبعاد",
+      "approved": false,
+      "whyEn": "Views 3D models. Rarely used and no longer preinstalled on new builds."
+    },
+    {
+      "name": "Microsoft.MixedReality.Portal",
+      "nameEn": "Mixed Reality Portal",
+      "nameAr": "بوابة الواقع المختلط",
+      "approved": false,
+      "whyEn": "For Windows Mixed Reality headsets. Useless without one."
+    },
+    {
+      "name": "Microsoft.WindowsFeedbackHub",
+      "nameEn": "Feedback Hub",
+      "nameAr": "مركز الملاحظات",
+      "approved": false,
+      "whyEn": "Sends feedback to Microsoft. Needed to report a Windows bug."
+    }
+  ]
+}

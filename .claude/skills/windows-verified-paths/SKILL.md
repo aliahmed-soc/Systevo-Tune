@@ -249,6 +249,24 @@ The engine tests `byte0 & 0x01`, correct for all three, and errs toward "enabled
 even flag — the safe side, since it means offering to disable something rather than believing it
 is already off.
 
+## Store package names (`Whitelists/bloatware.json`)
+
+| # | Item | Status |
+|---|---|---|
+| N24 | The eight package names in the bloatware whitelist | Model knowledge, 2026-07-27. Confirm each with `Get-AppxPackage` in the VM before approving it. |
+
+Every entry ships `approved: false` and the module builds no tweak for an unapproved entry, so a
+wrong name currently removes nothing. A name that no longer exists is harmless; a wrong name that
+matches something real is not — hence the approval gate.
+
+`BloatwareWhitelist` refuses at load time anything containing a Windows-component fragment
+(the Store, `SecHealthUI`, `VCLibs`, `NET.Native`, `UI.Xaml`, the shell hosts, `DesktopAppInstaller`).
+Those break the PC in ways Undo cannot fix.
+
+**Undo here is best effort and usually fails.** Re-registering needs the package files, which
+removal generally deletes; after that only the Store can reinstall. This is the one undo path in
+the engine that is expected to fail, and it says so in the preview and in the failure message.
+
 ## Cleanup paths
 
 | # | Path | Note |
