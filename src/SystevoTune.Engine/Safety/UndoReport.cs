@@ -13,18 +13,23 @@ public sealed record UndoFailure(string RunId, string RecordId, ChangeRecord? Re
 /// </summary>
 /// <param name="Undone">Records restored, in the order they were undone (newest change first).</param>
 /// <param name="Failures">Records that could not be restored. Show all of these to the user.</param>
+/// <param name="Permanent">
+/// Records that were never undoable — deleted temp files and the like. Not failures: nothing went
+/// wrong. They are listed so the user is told plainly what Undo cannot bring back.
+/// </param>
 /// <param name="Cancelled">The pass stopped early because the token was cancelled.</param>
 public sealed record UndoReport(
     IReadOnlyList<ChangeRecord> Undone,
     IReadOnlyList<UndoFailure> Failures,
+    IReadOnlyList<ChangeRecord> Permanent,
     bool Cancelled = false)
 {
     /// <summary>An empty report — nothing was left to undo.</summary>
-    public static UndoReport Empty { get; } = new([], []);
+    public static UndoReport Empty { get; } = new([], [], []);
 
-    /// <summary>Everything that was attempted went back, and nothing was skipped.</summary>
+    /// <summary>Everything that was attempted went back, and nothing was cut short.</summary>
     public bool AllSucceeded => Failures.Count == 0 && !Cancelled;
 
-    /// <summary>How many records the pass tried to restore.</summary>
+    /// <summary>How many records the pass tried to restore. Permanent records are not attempts.</summary>
     public int AttemptedCount => Undone.Count + Failures.Count;
 }

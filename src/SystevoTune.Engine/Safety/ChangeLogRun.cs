@@ -45,8 +45,18 @@ public sealed class ChangeLogRun
     /// <param name="target">What is being changed — a value name, service name, or path.</param>
     /// <param name="oldValue">The value read from the live system. <c>null</c> if the target does not exist.</param>
     /// <param name="newValue">The value about to be written. <c>null</c> if the target is being removed.</param>
+    /// <param name="undoable">
+    /// False only for genuinely permanent changes, such as deleting a temp file. The record is
+    /// still written, so the user can see what was removed.
+    /// </param>
     /// <exception cref="IOException">The record could not be written. The change must not be applied.</exception>
-    public ChangeRecord RecordChange(string module, string action, string target, string? oldValue, string? newValue)
+    public ChangeRecord RecordChange(
+        string module,
+        string action,
+        string target,
+        string? oldValue,
+        string? newValue,
+        bool undoable = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(module);
         ArgumentException.ThrowIfNullOrWhiteSpace(action);
@@ -62,6 +72,7 @@ public sealed class ChangeLogRun
             OldValue = oldValue,
             NewValue = newValue,
             Undone = false,
+            Undoable = undoable,
         };
 
         var line = JsonSerializer.Serialize(record, ChangeLogJson.Options);

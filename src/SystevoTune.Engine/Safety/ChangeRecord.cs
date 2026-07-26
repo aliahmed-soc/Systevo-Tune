@@ -46,4 +46,16 @@ public sealed record ChangeRecord
     /// <summary>Set once the old value has been put back and the log rewritten.</summary>
     [JsonPropertyName("undone")]
     public bool Undone { get; init; }
+
+    /// <summary>
+    /// Whether this change can be put back at all. False only for deletions that are genuinely
+    /// permanent, such as cleanup removing a temp file — the record still exists as an audit
+    /// trail, and undo reports it as un-restorable instead of pretending it worked.
+    /// </summary>
+    /// <remarks>
+    /// Not in the doc 5.2 example, and deliberately not <c>required</c>: a record written before
+    /// this field existed reads back as undoable, which is what every record then was.
+    /// </remarks>
+    [JsonPropertyName("undoable")]
+    public bool Undoable { get; init; } = true;
 }

@@ -65,7 +65,7 @@ public sealed class UndoEngine
         if (record is null)
         {
             return Task.FromResult(new UndoReport([],
-                [new UndoFailure(runId, recordId, null, $"Run '{runId}' has no record '{recordId}'.")]));
+                [new UndoFailure(runId, recordId, null, $"Run '{runId}' has no record '{recordId}'.")], []));
         }
 
         if (record.Undone)
@@ -86,6 +86,7 @@ public sealed class UndoEngine
     {
         var undone = new List<ChangeRecord>();
         var failures = new List<UndoFailure>();
+        var permanent = new List<ChangeRecord>();
         var cancelled = false;
 
         foreach (var (runId, record) in targets)
@@ -94,6 +95,14 @@ public sealed class UndoEngine
             {
                 cancelled = true;
                 break;
+            }
+
+            // A deleted temp file is gone. Say so rather than reporting a failure for
+            // something that was never going to come back.
+            if (!record.Undoable)
+            {
+                permanent.Add(record);
+                continue;
             }
 
             if (!_handlers.TryGetValue(record.Module, out var handler))
@@ -139,6 +148,6 @@ public sealed class UndoEngine
             undone.Add(record with { Undone = true });
         }
 
-        return new UndoReport(undone, failures, cancelled);
+        return new UndoReport(undone, failures, permanent, cancelled);
     }
 }
