@@ -8,4 +8,9 @@
     <RootNamespace>SystevoTune.Engine</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Tests assert on verified paths and command building without widening the public API. -->
+    <InternalsVisibleTo Include="SystevoTune.Engine.Tests" />
+  </ItemGroup>
+
 </Project>

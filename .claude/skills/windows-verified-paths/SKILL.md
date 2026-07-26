@@ -56,6 +56,40 @@ _None verified yet._
 | Purpose | Path / known folder | Resolved via | Docs | Verified |
 |---|---|---|---|---|
 
+## UNVERIFIED — human must check before any VM run
+
+Everything below came from the model's own knowledge during the autonomous session of
+2026-07-26. **None of it has been confirmed against Microsoft documentation or tested.**
+Code uses these values, and they are flagged here so they are checked before anything runs
+on a real machine.
+
+Checking one means: open the Microsoft docs page, confirm hive / path / value name / type,
+then move the row into the verified tables above with its link and today's date.
+
+### Registry values
+
+| # | Purpose | Ref | Type | Assumed meaning | Used by |
+|---|---|---|---|---|---|
+| U1 | Is System Restore switched on | `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore::RPSessionInterval` | DWORD | `0` = restore point creation off. Missing = default, treated as on. | `RestorePointService.IsSystemRestoreEnabled` |
+| U2 | Is System Restore off by group policy | `HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore::DisableSR` | DWORD | `1` = disabled machine-wide by policy. | `RestorePointService.IsSystemRestoreEnabled` |
+
+### Commands
+
+| # | Purpose | Command | Assumed behaviour | Used by |
+|---|---|---|---|---|
+| U3 | Create a restore point | `powershell.exe -NoProfile -NonInteractive -Command "Checkpoint-Computer -Description '<text>' -RestorePointType MODIFY_SETTINGS"` | Exit 0 on success. Emits a warning containing "already been created" / "within the past" when Windows declines because one was made in the last 24h. | `RestorePointService.CreateAsync` |
+
+### Output phrases matched as text
+
+These are string matches against Windows' own messages, so they are locale-sensitive: on a
+non-English Windows they will not match and the result falls through to `Failed`. Doc 07.4
+lists non-English Windows as a required test case.
+
+| # | Matched phrase | Treated as |
+|---|---|---|
+| U4 | "already been created", "within the past" | `Skipped` — a recent restore point exists |
+| U5 | "system restore is disabled", "system protection is turned off", "0x81000203" | `Disabled` |
+
 ## Permanently forbidden — never add these
 
 These are out of scope by project rule, not by oversight. Do not add them to any table above.
