@@ -65,8 +65,24 @@ public sealed record CleanupScanReport(IReadOnlyList<CleanupGroupScan> Groups)
 /// <param name="FilesDeleted">Files removed.</param>
 /// <param name="BytesFreed">Size removed.</param>
 /// <param name="FilesLocked">Files that were in use and left alone.</param>
-public sealed record CleanupApplyDetail(string GroupId, int FilesDeleted, long BytesFreed, int FilesLocked)
+/// <param name="SkippedReason">
+/// Why nothing was deleted, or <c>null</c> if the group ran. Set when a service the group needs
+/// stopped would not stop — decision H1 says skip with a warning rather than delete anyway.
+/// </param>
+public sealed record CleanupApplyDetail(
+    string GroupId,
+    int FilesDeleted,
+    long BytesFreed,
+    int FilesLocked,
+    string? SkippedReason = null)
 {
     /// <summary>Size freed, for display.</summary>
     public string HumanFreed => CleanupScanReport.Humanise(BytesFreed);
+
+    /// <summary>Nothing was deleted, and <see cref="SkippedReason"/> says why.</summary>
+    public bool WasSkipped => SkippedReason is not null;
+
+    /// <summary>A group that was left alone.</summary>
+    public static CleanupApplyDetail Skipped(string groupId, string reason)
+        => new(groupId, 0, 0, 0, reason);
 }

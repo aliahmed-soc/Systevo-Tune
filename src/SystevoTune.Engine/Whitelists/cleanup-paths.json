@@ -24,6 +24,11 @@
       "nameEn": "Windows Update cache",
       "nameAr": "ذاكرة تحديثات ويندوز",
       "recursive": true,
+      "note": "Decision H1. Microsoft's own reset stops these two services before touching this folder. If either will not stop cleanly the group is skipped - never deleted while they run, never force-killed. This is the ONLY group allowed to name stopServices, and wuauserv/bits are the ONLY services allowed; CleanupWhitelist refuses anything else at load time.",
+      "stopServices": [
+        "wuauserv",
+        "bits"
+      ],
       "paths": [
         "{WINDIR}\\SoftwareDistribution\\Download"
       ]

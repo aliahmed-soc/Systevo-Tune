@@ -15,8 +15,12 @@ namespace SystevoTune.Engine.Cleanup;
 public sealed class CleanupModule(
     CleanupWhitelist whitelist,
     IFileSystemService files,
-    IEnvironmentPaths environment)
+    IEnvironmentPaths environment,
+    IWindowsServiceController? services = null)
 {
+    /// <summary>How long to wait for a service to stop or start before giving up.</summary>
+    internal static readonly TimeSpan ServiceWaitTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>Module name on every cleanup change record.</summary>
     public const string ModuleName = "Cleanup";
 
@@ -109,6 +113,92 @@ public sealed class CleanupModule(
                 yield return entry;
             }
         }
+    }
+
+    /// <summary>
+    /// Deletes what a group holds. When the group names services, they are stopped first and
+    /// started again afterwards — decision H1.
+    /// </summary>
+    /// <remarks>
+    /// A service that will not stop means the group is skipped, not forced. Anything already
+    /// stopped is started again before returning, so a refusal leaves the PC as it was found.
+    /// </remarks>
+    internal async Task<CleanupApplyDetail> DeleteGroupAsync(CleanupGroup group, CancellationToken cancellationToken)
+    {
+        if (group.StopServices.Count == 0)
+        {
+            return DeleteGroup(group, cancellationToken);
+        }
+
+        if (services is null)
+        {
+            return CleanupApplyDetail.Skipped(group.Id,
+                $"{group.NameEn} needs Windows Update stopped first, and this build has no way to do that. "
+                + "Nothing was deleted.");
+        }
+
+        var stopped = new List<string>();
+        foreach (var service in group.StopServices)
+        {
+            if (await services.TryStopAsync(service, ServiceWaitTimeout, cancellationToken).ConfigureAwait(false))
+            {
+                stopped.Add(service);
+                continue;
+            }
+
+            // Put back whatever we already stopped, then leave the folder alone.
+            await StartAllAsync(stopped, cancellationToken).ConfigureAwait(false);
+
+            return CleanupApplyDetail.Skipped(group.Id,
+                $"'{service}' would not stop, so {group.NameEn} was left untouched. "
+                + "Deleting while it runs risks breaking an update that is waiting to install.");
+        }
+
+        CleanupApplyDetail detail;
+        var stillDown = new List<string>();
+        try
+        {
+            detail = DeleteGroup(group, cancellationToken);
+        }
+        finally
+        {
+            // Whatever happened above, the services go back on — including when the delete threw
+            // or the run was cancelled. Started with CancellationToken.None on purpose: a
+            // cancelled run must not be the reason Windows Update stays down.
+            stillDown.AddRange(await StartAllAsync(stopped, CancellationToken.None).ConfigureAwait(false));
+        }
+
+        if (stillDown.Count > 0)
+        {
+            // Leaving Windows Update stopped is worse than not cleaning at all, so this is loud.
+            throw new InvalidOperationException(
+                $"{group.NameEn} was cleaned, but {string.Join(" and ", stillDown)} did not start again. "
+                + "Start them from Services, or restart the PC, before relying on Windows Update.");
+        }
+
+        return detail;
+    }
+
+    /// <summary>Starts each service, returning the ones that did not come back up.</summary>
+    private async Task<IReadOnlyList<string>> StartAllAsync(
+        IReadOnlyList<string> serviceNames,
+        CancellationToken cancellationToken)
+    {
+        if (services is null || serviceNames.Count == 0)
+        {
+            return [];
+        }
+
+        var failed = new List<string>();
+        foreach (var service in serviceNames)
+        {
+            if (!await services.TryStartAsync(service, ServiceWaitTimeout, cancellationToken).ConfigureAwait(false))
+            {
+                failed.Add(service);
+            }
+        }
+
+        return failed;
     }
 
     /// <summary>Deletes what a group holds, leaving locked files alone.</summary>

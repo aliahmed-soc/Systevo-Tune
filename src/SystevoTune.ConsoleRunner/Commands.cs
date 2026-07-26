@@ -189,7 +189,10 @@ internal static class Commands
         var run = host.Log.StartRun();
         Console.WriteLine($"Run {run.RunId} — log at {run.FilePath}");
 
-        var report = await host.Runner.ApplyAsync(host.ProfileBuilder.Build(profile), run).ConfigureAwait(false);
+        // Built once and reused: rebuilding would hand back fresh tweaks whose LastApply is still
+        // null, so the cleanup detail below would silently print nothing.
+        var tweaks = host.ProfileBuilder.Build(profile);
+        var report = await host.Runner.ApplyAsync(tweaks, run).ConfigureAwait(false);
 
         foreach (var outcome in report.Outcomes)
         {
@@ -201,12 +204,16 @@ internal static class Commands
             }
         }
 
-        foreach (var cleanup in host.ProfileBuilder.Build(profile).OfType<CleanupTweak>())
+        foreach (var cleanup in tweaks.OfType<CleanupTweak>())
         {
-            if (cleanup.LastApply is { } detail)
+            if (cleanup.LastApply is not { } detail)
             {
-                Console.WriteLine($"  {cleanup.Name}: freed {detail.HumanFreed}, {detail.FilesLocked} file(s) in use and left alone");
+                continue;
             }
+
+            Console.WriteLine(detail.WasSkipped
+                ? $"  {cleanup.Name}: SKIPPED — {detail.SkippedReason}"
+                : $"  {cleanup.Name}: freed {detail.HumanFreed}, {detail.FilesLocked} file(s) in use and left alone");
         }
 
         Console.WriteLine($"  {report.AllApplied.Count} applied, {report.AllFailures.Count} failed.");

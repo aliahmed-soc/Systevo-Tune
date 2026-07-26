@@ -35,7 +35,28 @@ test template.
 My recommendation is **2 or 3**. Boot time varies enormously between boots on the same machine,
 so it makes a poor before/after claim even when measured properly.
 
-## B3 — How should the Windows Update cache be cleaned? (needs your call)
+## B3 — RESOLVED by the human, session 2 (decisions H1, H2)
+
+**Decision:** clear only `C:\Windows\SoftwareDistribution\Download`. Stop `wuauserv` and `bits`,
+delete the contents, start both again. If either will not stop cleanly, skip the group with a
+warning — never delete while they run, never force-kill. No undo needed, but log the file count
+and bytes freed. This is the only exception to the services rule, and only inside that path.
+
+**Implemented.** `IWindowsServiceController` over `sc.exe`, reading the numeric STATE code so a
+localised Windows still parses. The exception is enforced in `CleanupWhitelist` at load time: only
+the `windows-update-cache` group may name `stopServices`, and only `wuauserv`/`bits` are accepted —
+so it cannot be widened by editing the JSON. Mutation-checked (5 tests fail without the guard).
+
+A refusal to stop puts back whatever was already stopped, so the PC is left as it was found. A
+service that will not restart afterwards is a loud failure, not a warning: leaving Windows Update
+down is worse than not cleaning at all.
+
+The group stays out of both profiles (decision 23) — the human's brief resolved *how* to clean it,
+not whether a preset should do it unasked.
+
+---
+
+### Original write-up, kept for context
 
 **Found during verification on 2026-07-27.** The path is right; our method is not.
 

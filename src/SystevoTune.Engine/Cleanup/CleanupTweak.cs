@@ -37,24 +37,28 @@ public sealed class CleanupTweak(CleanupModule module, CleanupGroup group) : ITw
             return Task.FromResult(TweakPlan.AlreadyApplied(Id, Name, $"{group.NameEn}: nothing to clean."));
         }
 
+        var services = group.StopServices.Count == 0
+            ? string.Empty
+            : $" {string.Join(" and ", group.StopServices)} will be stopped first and started again afterwards;"
+              + " if they will not stop, nothing is deleted.";
+
         var change = new PlannedChange(
             Module,
             "DeleteGroupContents",
             group.Id,
             CleanupModule.DescribeState(scan.FileCount, scan.TotalBytes),
             CleanupModule.DescribeState(0, 0),
-            $"{group.NameEn}: delete {scan.FileCount} files, freeing about {scan.HumanSize}.",
+            $"{group.NameEn}: delete {scan.FileCount} files, freeing about {scan.HumanSize}.{services}",
             Undoable: false);
 
         return Task.FromResult(TweakPlan.Ready(Id, Name, [change]));
     }
 
     /// <inheritdoc />
-    public Task ApplyChangeAsync(PlannedChange change, CancellationToken cancellationToken)
+    public async Task ApplyChangeAsync(PlannedChange change, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        LastApply = module.DeleteGroup(group, cancellationToken);
-        return Task.CompletedTask;
+        LastApply = await module.DeleteGroupAsync(group, cancellationToken).ConfigureAwait(false);
     }
 }

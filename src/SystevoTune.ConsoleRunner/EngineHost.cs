@@ -67,7 +67,8 @@ internal sealed class EngineHost
         var powerPlans = new PowerCfgPowerPlanService(processes);
         var powerPlanCatalog = PowerPlanCatalog.Load();
         var registryTweaks = RegistryTweakCatalog.Load();
-        var cleanup = new CleanupModule(CleanupWhitelist.Load(), files, environment);
+        var cleanup = new CleanupModule(
+            CleanupWhitelist.Load(), files, environment, new ScServiceController(processes));
 
         return new EngineHost(
             ChangeLog.Default(),

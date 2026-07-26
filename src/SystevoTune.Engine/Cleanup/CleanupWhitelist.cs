@@ -27,6 +27,14 @@ public sealed record CleanupGroup
     /// <summary>Tokenised paths, resolved by <see cref="CleanupWhitelist.Resolve"/>.</summary>
     [JsonPropertyName("paths")]
     public required IReadOnlyList<string> Paths { get; init; }
+
+    /// <summary>
+    /// Services to stop before deleting and start again afterwards. Almost always empty:
+    /// <see cref="CleanupWhitelist"/> refuses any group but the update cache, and any service but
+    /// Windows Update and BITS. See decisions H1 and H2.
+    /// </summary>
+    [JsonPropertyName("stopServices")]
+    public IReadOnlyList<string> StopServices { get; init; } = [];
 }
 
 /// <summary>
@@ -43,6 +51,19 @@ public sealed class CleanupWhitelist
     /// <summary>Folder names that are always off limits, whatever the whitelist says.</summary>
     private static readonly string[] ForbiddenProfileFolders =
         ["Documents", "Desktop", "Downloads", "Pictures", "Videos", "Music"];
+
+    /// <summary>
+    /// The single group allowed to stop services, and the only services it may stop.
+    /// </summary>
+    /// <remarks>
+    /// Golden rule 4 forbids touching services. Decision H1 carved out one exception for the
+    /// Windows Update cache; decision H2 says it is the only one. Hard-coding the pair here means
+    /// the exception cannot be widened by editing the whitelist file — someone adding
+    /// <c>"stopServices": ["WinDefend"]</c> gets a load-time refusal, not a disabled Defender.
+    /// </remarks>
+    private const string ServiceStopGroupId = "windows-update-cache";
+
+    private static readonly string[] ServiceStopAllowed = ["wuauserv", "bits"];
 
     private CleanupWhitelist(IReadOnlyList<CleanupGroup> groups) => Groups = groups;
 
@@ -92,6 +113,8 @@ public sealed class CleanupWhitelist
             {
                 throw new InvalidOperationException($"Cleanup group '{group.Id}' lists no paths.");
             }
+
+            GuardServiceStops(group);
         }
 
         return new CleanupWhitelist(file.Groups);
@@ -130,6 +153,33 @@ public sealed class CleanupWhitelist
         var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(resolved));
         GuardForbidden(full, environment);
         return full;
+    }
+
+    /// <summary>
+    /// Keeps the one service-stopping exception exactly where the human put it.
+    /// </summary>
+    private static void GuardServiceStops(CleanupGroup group)
+    {
+        if (group.StopServices.Count == 0)
+        {
+            return;
+        }
+
+        if (!string.Equals(group.Id, ServiceStopGroupId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Cleanup group '{group.Id}' asks to stop services. Only '{ServiceStopGroupId}' may do that.");
+        }
+
+        foreach (var service in group.StopServices)
+        {
+            if (!ServiceStopAllowed.Contains(service, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Cleanup may never stop '{service}'. Only {string.Join(" and ", ServiceStopAllowed)} are allowed, "
+                    + "and only for the Windows Update cache.");
+            }
+        }
     }
 
     /// <summary>
