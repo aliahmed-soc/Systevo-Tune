@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # windows-latest is not a preference: the engine targets net8.0-windows and calls
+    # Microsoft.Win32.Registry, powercfg and sc.exe. It will not build anywhere else.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore SystevoTune.sln
+
+      # TreatWarningsAsErrors is on for every project, so a new warning fails here.
+      - name: Build
+        run: dotnet build SystevoTune.sln --configuration Release --no-restore
+
+      # No --no-build: the test host needs the test projects built for the same configuration.
+      # A failing test fails the step, which fails the job, which turns the badge red.
+      - name: Test
+        run: >
+          dotnet test SystevoTune.sln
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory artifacts/test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/test-results
+          if-no-files-found: warn
+
+      # C6. Measured and published, not chased.
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: artifacts/test-results/**/coverage.cobertura.xml
+          if-no-files-found: warn
+
+  publish-portable:
+    # Proves the portable build still produces a single file. It is never run here — the first
+    # launch happens in the maintainer's VM.
+    runs-on: windows-latest
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish app
+        run: dotnet publish src/SystevoTune.App/SystevoTune.App.csproj -p:PublishProfile=Portable
+
+      - name: Publish console runner
+        run: dotnet publish src/SystevoTune.ConsoleRunner/SystevoTune.ConsoleRunner.csproj -p:PublishProfile=Portable
+
+      - name: Upload portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: systevo-tune-portable
+          path: artifacts/publish
+          if-no-files-found: error

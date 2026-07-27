@@ -1,0 +1,24 @@
+<Project>
+
+  <!-- Inherit everything from the repo root, then relax what only makes sense for shipped APIs. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
+    Two rules are off for test projects only. Both are public-API rules being applied to code that
+    is not a public API.
+
+    CA1707 — "remove the underscores from member name".
+      The engine-conventions skill requires test names to read as sentences:
+      Undo_continues_after_one_step_fails. That is the single most useful thing about the suite
+      when something breaks, and it is worth more than matching a naming rule aimed at libraries
+      other people consume.
+
+    CA1816 — "call GC.SuppressFinalize in Dispose".
+      xUnit fixtures implement IDisposable to delete a temp folder. None of them has a finalizer
+      and none is meant to be derived from, so the ceremony would add noise without adding safety.
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CA1707;CA1816</NoWarn>
+  </PropertyGroup>
+
+</Project>

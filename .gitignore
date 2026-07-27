@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Systevo Tune
 *.zip
+
+# Publish output
+artifacts/

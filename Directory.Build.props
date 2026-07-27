@@ -1,0 +1,49 @@
+<Project>
+
+  <!--
+    B2. One place for the settings every project shares, so a new project cannot quietly opt out
+    of them. A tool that edits system settings should not ship with warnings nobody read.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
+  <!--
+    Four rules are switched off deliberately. Every other analyzer warning is an error, and these
+    are listed individually rather than by turning analysis down, so adding a fifth is a visible
+    decision rather than a quiet slide.
+
+    CA1859 — "return the concrete type for performance".
+      Fights the design on purpose. Returning IReadOnlyDictionary and IReadOnlyList from engine
+      APIs is what stops callers mutating collections the engine still owns, and ITweak is
+      returned as an interface because that is the entire point of the tweak abstraction. The rule
+      targets hot paths; nothing here runs more than a few dozen times per run, so the trade it
+      proposes is the wrong way round.
+
+    CA1720 — "identifier contains a type name".
+      Hits RegistryValueType.String, RegistryValueType.Binary and PowerPlanEntry.Guid. Those names
+      are the JSON schema of the whitelist files and the vocabulary Windows itself uses for
+      registry value kinds. Renaming them would either break the shipped whitelists or put the C#
+      and the data files out of step, which is worse than the naming smell.
+
+    CA1716 — "member conflicts with a reserved keyword" (Module, in Visual Basic).
+      ITweak.Module and IUndoHandler.Module carry the value written to the change log's "module"
+      field, which doc 05 section 5.2 fixes. The C# name matching the logged name is worth more
+      than VB ergonomics for a Windows-only desktop app.
+
+    CA1822 — "member can be marked static".
+      TweakRunner's methods happen not to touch instance state today. It is a service that is
+      constructed, injected and will gain dependencies; making it static would bake in the
+      opposite and change every call site to get there.
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CA1859;CA1720;CA1716;CA1822</NoWarn>
+  </PropertyGroup>
+
+</Project>
