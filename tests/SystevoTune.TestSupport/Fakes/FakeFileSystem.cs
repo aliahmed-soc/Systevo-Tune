@@ -48,9 +48,20 @@ public sealed class FakeFileSystem : IFileSystemService
     /// <inheritdoc />
     public bool DirectoryExists(string path) => _directories.Contains(Path.TrimEndingDirectorySeparator(path));
 
+    /// <summary>
+    /// When set, enumerating throws. Stands in for a disk that has gone away mid-scan, so callers
+    /// can be tested for reporting the failure rather than taking the window down.
+    /// </summary>
+    public Exception? EnumerateFailure { get; set; }
+
     /// <inheritdoc />
     public IEnumerable<FileEntry> EnumerateFiles(string path, bool recursive)
     {
+        if (EnumerateFailure is not null)
+        {
+            throw EnumerateFailure;
+        }
+
         var root = Path.TrimEndingDirectorySeparator(path) + Path.DirectorySeparatorChar;
 
         foreach (var (fullPath, size) in _files)

@@ -69,7 +69,7 @@ public sealed class VerificationRunner(
         var before = await collector.CaptureAsync("before", cancellationToken).ConfigureAwait(false);
 
         var run = log.StartRun();
-        var applied = await applier.ApplyAsync(profile, run, cancellationToken).ConfigureAwait(false);
+        var applied = await applier.ApplyAsync(profile, run, progress: null, cancellationToken).ConfigureAwait(false);
 
         var afterApply = await collector.CaptureAsync("after-apply", cancellationToken).ConfigureAwait(false);
 

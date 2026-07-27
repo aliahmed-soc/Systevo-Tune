@@ -235,7 +235,7 @@ public class TweakRunnerTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
 
-        var report = await _runner.ApplyAsync([tweak], run, cancellation.Token);
+        var report = await _runner.ApplyAsync([tweak], run, progress: null, cancellation.Token);
 
         Assert.True(report.Cancelled);
         Assert.Empty(tweak.Applied);

@@ -38,9 +38,17 @@ public sealed class TweakRunner
     /// come from the live system rather than from a preview the user may have left on screen.
     /// One failure never stops the rest.
     /// </summary>
+    /// <param name="tweaks">What to apply, in order.</param>
+    /// <param name="run">The open log run to record into.</param>
+    /// <param name="progress">
+    /// Reported after each tweak finishes, so a UI can show results as they happen rather than
+    /// only at the end. Optional — nothing about the run changes when it is <c>null</c>.
+    /// </param>
+    /// <param name="cancellationToken">Stops the run between tweaks.</param>
     public async Task<ApplyReport> ApplyAsync(
         IEnumerable<ITweak> tweaks,
         ChangeLogRun run,
+        IProgress<TweakOutcome>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tweaks);
@@ -61,15 +69,19 @@ public sealed class TweakRunner
 
             if (!plan.HasChanges)
             {
-                outcomes.Add(new TweakOutcome(plan.TweakId, plan.TweakName, plan.Status, [], [], plan.Message));
+                var nothingToDo = new TweakOutcome(plan.TweakId, plan.TweakName, plan.Status, [], [], plan.Message);
+                outcomes.Add(nothingToDo);
+                progress?.Report(nothingToDo);
                 continue;
             }
 
             var (applied, failures, stopped) = await ApplyPlanAsync(tweak, plan, run, cancellationToken)
                 .ConfigureAwait(false);
 
-            outcomes.Add(new TweakOutcome(
-                plan.TweakId, plan.TweakName, plan.Status, applied, failures, plan.Message, plan.RequiresRestart));
+            var outcome = new TweakOutcome(
+                plan.TweakId, plan.TweakName, plan.Status, applied, failures, plan.Message, plan.RequiresRestart);
+            outcomes.Add(outcome);
+            progress?.Report(outcome);
 
             if (stopped)
             {

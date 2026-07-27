@@ -23,9 +23,14 @@ public sealed record ProfileApplyResult(ApplyReport Report, IReadOnlyList<ITweak
 public sealed class ProfileApplier(ProfileBuilder builder, TweakRunner runner)
 {
     /// <summary>Applies a profile into an open run.</summary>
+    /// <param name="profile">The preset to apply.</param>
+    /// <param name="run">The open log run to record into.</param>
+    /// <param name="progress">Reported after each tweak, so a UI can show results as they happen.</param>
+    /// <param name="cancellationToken">Stops the run between tweaks.</param>
     public async Task<ProfileApplyResult> ApplyAsync(
         Profile profile,
         ChangeLogRun run,
+        IProgress<TweakOutcome>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -34,7 +39,7 @@ public sealed class ProfileApplier(ProfileBuilder builder, TweakRunner runner)
         run.RecordProfile(profile.Id);
 
         var tweaks = builder.Build(profile);
-        var report = await runner.ApplyAsync(tweaks, run, cancellationToken).ConfigureAwait(false);
+        var report = await runner.ApplyAsync(tweaks, run, progress, cancellationToken).ConfigureAwait(false);
 
         return new ProfileApplyResult(report, tweaks);
     }
