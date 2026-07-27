@@ -1,188 +1,215 @@
-# Session Report — autonomous build session 2, 2026-07-27
+# Session Report — autonomous build session 3, 2026-07-27
 
-**Build clean, 0 warnings. 365 tests, 0 failures.** Nothing ran against the dev machine.
+**Build clean, zero warnings, analyzers on. 433 tests, 0 failures.**
+Nothing was launched. The app has never been run.
 
-Tasks 1–8 done. Task 9 (WPF scaffold) deliberately not started — see the end.
-
----
-
-## 1. Done
-
-| # | Task | Commit |
-|---|------|--------|
-| 1 | O1 closed — power schemes resolved at runtime, never assumed | `c2aa4db` |
-| 2 | O2–O5 closed | `c280620` |
-| 3 | B3 implemented as you decided | `4994a55` |
-| 4 | Session-1 leftovers — only B1 remains, and it needs you | — |
-| 5 | Privacy module | `6542392` |
-| 6 | Bloatware remover engine | `b222333` |
-| 7 | Re-apply last profile | `708ac0f` |
-| 8 | **VM verification harness + checklist** | `0a5c9a5` |
-
-Still no NuGet package beyond the xUnit test template.
-
-### The five guards that are mutation-checked
-
-Each was deliberately broken, the failures observed, and the break reverted:
-
-| Guard | Tests that fail without it |
-|---|---|
-| Undo walks newest-first | 2 |
-| Undo continues past a failing step | 1 |
-| Cleanup refuses user folders | 9 |
-| Services forbidden list | 10 |
-| Update-cache service exception stays scoped | 5 |
-
-### Three real bugs found while building
-
-1. **`FakePowerPlanService` was too permissive.** Tightening it to refuse activating a scheme it
-   does not hold immediately exposed a live bug: after a failed scheme creation, the tweak went on
-   to activate a scheme that was never made.
-2. **`apply` built the profile twice.** The cleanup summary read fresh tweak instances whose
-   `LastApply` was still null, so cleanup detail had never actually printed.
-3. **`BloatwareUndoHandler` was written but never registered.** Undoing an app removal would have
-   reported "no undo handler registered".
+Tier A complete. Tier B complete. Tier C not started.
 
 ---
 
-## 2. Your decisions, as implemented
+## 1. Tiers completed
 
-**H1/H2 — the update cache.** Stop `wuauserv` and `bits`, delete, restart both. A service that
-will not stop skips the group with a warning; nothing is force-killed. A refusal puts back whatever
-was already stopped. The restart runs in a `finally` with `CancellationToken.None`, so a cancelled
-or throwing delete still brings the services back. A service that will not *restart* is a loud
-failure, not a warning — leaving Windows Update down is worse than not cleaning.
+### Tier A — the WPF app
 
-The "only exception" is **enforced, not trusted**: `CleanupWhitelist` refuses at load time any
-group but `windows-update-cache` naming `stopServices`, and any service but those two. Adding
-`"stopServices": ["WinDefend"]` to the JSON gets a refusal, not a disabled Defender.
-
-The group stays out of both profiles (decision 23). Your brief resolved *how* to clean it, not
-whether a preset should do it unasked — say the word and I will add it.
-
-**H3 — no UI.** Honoured.
-
----
-
-## 3. All six open questions are closed
-
-| # | Was | Now |
+| | | Commit |
 |---|---|---|
-| O1 | Scheme GUIDs assumed | Resolved at runtime: exact GUID → a scheme we created → by name. High Performance can be copied from its template; undo deletes the copy. Ultimate is never invented. |
-| O2 | Active scheme read from a `*` in undocumented output | `powercfg /getactivescheme`, a documented option |
-| O3 | Restore-point verdict from English prose | Counted with `Get-ComputerRestorePoint`. An Arabic-prose test asserts the verdict still lands. |
-| O4 | "Not available on this PC" claimed knowledge we lacked | Absent means Windows is deciding; the message says so |
-| O5 | Two undocumented registry reads were the authority | Demoted to a hint; the counts decide |
-| O6 | `AppCaptureEnabled` missing | Added, along with `HistoricalCaptureEnabled` |
+| A1 | `src/SystevoTune.App` (WPF, MVVM) + `tests/SystevoTune.App.Tests` | `5e0b272` |
+| A2 | Screen 1 — Scan, read-only, sizes per cleanup group, state per tweak | `5e0b272` |
+| A3 | Screen 2 — Review, tick list grouped by tweak, profile picker, select-all | `5e0b272` |
+| A4 | Screen 3 — Apply, streams engine results live, restart flags aggregated | `5e0b272` |
+| A5 | Screen 4 — Results, freed bytes, big Undo All, re-apply | `5e0b272` |
+| A6 | Two-step apply with the restore-point warning in red | `5e0b272` |
+| A7 | EN + AR resource files, FlowDirection, language switch, XAML literal scanner | `5e0b272` |
+| A8 | Dark theme | `5e0b272` |
+| A9 | 52 ViewModel tests across all six required cases | `5e0b272` |
+
+### Tier B — hardening
+
+| | | Commit |
+|---|---|---|
+| B1 | GitHub Actions CI on windows-latest, badge in README | `30faa9d` |
+| B2 | Analyzers + `TreatWarningsAsErrors` everywhere | `30faa9d` |
+| B3 | Log viewer screen | `153d1c3` |
+| B4 | Settings screen | `153d1c3` |
+| B5 | Portable single-file publish profiles, documented | `30faa9d` |
+| B6 | `docs/SERVICES-WHITELIST-DRAFT.md` | `30faa9d` |
+| B7 | Public README, EN + AR, honest status | `30faa9d` |
+
+### Tier C — not started
+
+A and B took the session. Nothing from C was begun, so nothing is half-done.
+Some of it landed incidentally while doing A and B:
+
+- **C1/C2 partially:** `TabIndex` is set across all screens, `IsDefault`/`IsCancel` are wired on
+  the apply and confirm buttons, `AutomationProperties.Name` is on every interactive control, and
+  the dark theme's contrast ratios are calculated in `Theme/Dark.xaml` (all above WCAG AA).
+- **C3 fully, as it turned out:** empty and edge states were needed to make the ViewModel tests
+  honest — nothing selected, scan finds nothing, everything already applied, undo with no runs.
+- **C4 partially:** `MetricsCollector` is wired into `ScanViewModel.Before`; the values are
+  collected but not yet rendered.
+- **C5, C6:** not done. C6's coverage artifact *is* configured in CI (`--collect:"XPlat Code
+  Coverage"`), but no percentage has been measured — see section 5.
 
 ---
 
-## 4. What is still UNVERIFIED
+## 2. Test count and coverage
 
-Full detail in `.claude/skills/windows-verified-paths/SKILL.md`. **`docs/VM-CHECKLIST.md` maps
-every one to the exact command that proves it.**
+**433 tests: 365 engine, 68 app.** All green.
 
-**Verified against Microsoft docs (14):** power scheme GUIDs V1–V3, `powercfg /list` and
-`/setactive`, `Checkpoint-Computer` and its once-a-day message, `SYSTEM_POWER_STATUS`,
-`MEMORYSTATUSEX`, service `Start` values, `AllowGameDVR`, `AllowTelemetry`.
+**Coverage: not measured this session.** CI collects `coverage.cobertura.xml` and uploads it as an
+artifact, so the number will exist after the first CI run — but I did not run a coverage pass
+locally, and quoting a figure I have not seen would be exactly the kind of number doc 01 rules
+out. Read it off the first green build.
 
-**Undocumented by Microsoft (24):** N1–N24. Visual effects, Game Mode, Game Bar, GPU scheduling,
-startup approvals, System Restore detection, ContentDeliveryManager, the Ultimate Performance
-GUID, cleanup paths, and the bloatware package names. Microsoft publishes no reference for any of
-it — that is the finding, not a gap in searching.
-
-### The three that carry real risk
-
-1. **N12 — all-users startup approvals.** The whitelist pairs the `ProgramData` Startup folder
-   with **HKLM**. If it is actually HKCU, disabling an all-users startup item silently does
-   nothing. Checklist step 1 has the exact experiment.
-2. **N18–N23 — the `SubscribedContent-NNNNNN` ids.** Opaque Microsoft content numbers, the least
-   trustworthy entries in the whole project. They can change between Windows builds; a stale id
-   quietly does nothing. Toggle each Settings switch and see which id moves.
-3. **N24 — bloatware package names.** Currently harmless because nothing is approved, but confirm
-   each with `Get-AppxPackage` before flipping any `approved` flag.
-
-### Two edition caveats worth carrying
-
-`AllowGameDVR` and `AllowTelemetry` both list Pro/Enterprise/Education/IoT and **not Home**. On a
-Home VM expect them to do nothing. Home is a very common gaming PC.
+What I can say without a tool: the engine's decision-making is covered thoroughly (five safety
+guards are mutation-checked — each fails tests when removed). The uncovered surface is the thin
+Windows adapters (`WindowsRegistryService`, `ProcessRunner`, `ScServiceController`, and the
+`Windows*` classes generally) and all XAML. Both are uncovered on purpose: they are the layer that
+cannot be tested without touching the machine, which is what the VM run is for.
 
 ---
 
-## 5. Blocked
+## 3. Engine bugs found through UI work
 
-**B1 — boot time metric.** Unchanged; your brief did not cover it. Needs the
-`System.Diagnostics.EventLog` package to read event 100. My recommendation is still to drop it or
-show uptime instead — boot time varies too much between boots to make a decent before/after claim.
-Freed space and startup app count are the honest numbers.
+Three, all fixed with tests.
 
-**B2/B3 — resolved.** B3 by you; B2 by the documentation pass.
+**1. `Progress<T>` was the wrong tool, and it bit.**
+It captures `SynchronizationContext` at construction and falls back to the **thread pool** when
+there is none. The engine reports progress from inside `ConfigureAwait(false)` continuations, so
+several callbacks landed on different pool threads at once and raced appending to an
+`ObservableCollection` — which surfaced as a null element and a `NullReferenceException` in a
+test. Replaced with `MarshalledProgress`, which posts to the UI context under WPF and runs inline
+when there is none. The context is now passed explicitly, because xUnit installs its own context
+and capturing "whatever is current" would have made the tests non-deterministic in a different way.
 
-Nothing else is blocked. `docs/DECISIONS.md` holds 39 decisions plus your three.
+**2. `ApplyViewModel` leaked a `CancellationTokenSource` per run.** Caught by CA1001 once
+analyzers were on. A fresh view model is created for every apply, so every run leaked one. Now
+`IDisposable`, and the shell disposes the model it replaces.
+
+**3. `ScanViewModel` used `FirstOrDefault` on an indexable collection.** Caught by CA1826. Trivial,
+but it was a real allocation on a hot-ish path.
+
+Two more things worth recording that were *not* engine bugs:
+
+- The runner turning a throwing tweak into a `Blocked` plan is correct, and my test asserting it
+  propagates was wrong. Split into two honest tests instead of changing the engine.
+- A test asserting an unreadable log folder surfaces an error was untrue — `ChangeLog` treats a
+  missing folder as empty, which is right for a PC where nothing has been applied. Replaced rather
+  than forced to pass.
+
+**One deliberate engine change, not a bug fix:** `TweakRunner.ApplyAsync` and
+`ProfileApplier.ApplyAsync` gained an optional `IProgress<TweakOutcome>`. A4 requires streaming and
+there was nothing to stream from. Additive, and nothing about a run changes when it is `null`. It
+touches no tweak, path or whitelist, so the engine freeze holds.
 
 ---
 
-## 6. Your next actions
+## 4. Analyzer suppressions — please sanity-check these
 
-### 1. Review `docs/DECISIONS.md`
+B2 said no blanket suppressions and a reason for each. Fifteen findings: two were real defects
+(above), thirteen were four rules fighting deliberate design decisions. They are switched off by
+rule, individually, with the reasoning written into `Directory.Build.props` and
+`tests/Directory.Build.props`:
 
-Decisions 31–39 are this session's. The four worth your eye:
+| Rule | Why it is off |
+|---|---|
+| CA1859 | Wants concrete collection types returned. Returning `IReadOnly*` is what stops callers mutating collections the engine owns, and `ITweak` is an interface on purpose. |
+| CA1720 | Objects to `RegistryValueType.String` and `PowerPlanEntry.Guid`. Those names *are* the JSON schema of the shipped whitelists. |
+| CA1716 | Objects to `ITweak.Module`. That name is the change log's `module` field, fixed by doc 5.2. |
+| CA1822 | Wants `TweakRunner` static. It is an injected service that will gain dependencies. |
+| CA1707 (tests only) | Underscored test names are required by `engine-conventions` and are the most useful thing about the suite when something breaks. |
+| CA1816 (tests only) | xUnit fixtures implement `IDisposable` purely to delete a temp folder. |
 
-- **31** — Gaming does Ultimate-if-present → High-if-present → *create High*. Ultimate is never
-  invented: it parks fewer cores and is a bigger change than a tune-up should make on a machine
-  that never offered it. Disagree and it is a one-line whitelist change.
-- **38** — the telemetry tweak writes `1` (required only), not `0`, and is named to match, because
-  Microsoft says `0` is Enterprise-only and behaves as `1` everywhere else.
-- **39** — privacy leaves the Spotlight *wallpaper* alone and removes only the overlay advert.
-- **23** — the update cache is still out of both profiles.
+If you disagree with any of these, the fix is one line each — but the code change they imply is
+larger, which is why I wrote the reasons down rather than just complying.
 
-### 2. Work through `docs/VM-CHECKLIST.md` steps 0–2
+---
 
-All read-only. Step 0 records the VM's edition, which several assumptions depend on.
+## 5. Open questions for you
 
-### 3. VM snapshot, then run `verify`
+1. **Coverage number.** Not measured (section 2). Read it from the first CI run.
+2. **`WSearch` in the services draft.** It is the one candidate a user would actually notice —
+   Start menu and Explorer search get worse. Arguably a feature, not bloat. My read is it should
+   not go in a preset even if you approve it for manual use.
+3. **Whether services tuning is worth shipping at all.** Working through B6 honestly: of ten
+   candidates, three are safe *because* they are worthless, one (`SysMain`) has a real payoff and
+   only on an SSD, and one is user-visible in a bad way. Doc 04 says ten solid features beat forty
+   weak ones.
+4. **B1 (boot time metric)** — still yours, unchanged from session 1. Needs a decision on the
+   `System.Diagnostics.EventLog` package. My recommendation is still to drop it.
+5. **Re-apply button on the Results screen** is present and enabled but not yet wired to an action
+   — the command needs the same confirm-dialog path as Apply, which lives in the window rather
+   than the view model. Small, but it is a visible control that currently does nothing.
+
+---
+
+## 6. Tomorrow's VM plan
+
+Unchanged in shape, with one screen-based step added at the end.
+
+### 1. Snapshot the VM first
+
+Nothing below is safe without it.
+
+### 2. Run the automated cycle
 
 ```bash
 dotnet run --project src/SystevoTune.ConsoleRunner -- verify gaming --vm
 ```
 
-Snapshot → apply → snapshot → Undo All → snapshot → diff, in one command. Exit code **0 and
-`PASS`** is doc 07.2 satisfied. Artifacts land in
-`C:\ProgramData\SystevoTune\verify\<run>-<profile>\`: three JSON snapshots and a Markdown report.
+Snapshot → apply → snapshot → Undo All → snapshot → diff, in one command.
+**Exit code 0 and `PASS`** means doc 07.2 is satisfied. Artifacts land in
+`C:\ProgramData\SystevoTune\verify\<run>-<profile>\`.
 
-Two things to expect and not misread:
+Two results to read correctly: `INCONCLUSIVE` (exit 2) means the profile changed nothing so
+nothing was proved — roll back and retry, do not treat it as a pass. Deleted temp files appearing
+under "Permanent by design" is correct, not a failure.
 
-- **`INCONCLUSIVE`** (exit 2) means the profile changed nothing, so nothing was proved. Roll back
-  to a clean snapshot rather than treating it as a pass.
-- Deleted temp files appear under **"Permanent by design"**. Correct, not a failure.
+Then repeat for `work`.
 
-Then repeat for `work`, and do the manual half the harness cannot: reboot and confirm the settings
-survive, and that Windows Update still works after the cache cleanup.
+### 3. Work through `docs/VM-CHECKLIST.md`
 
-### 4. Then, if you want them
+Steps 0–2 are read-only and settle the 24 items Microsoft does not document. The three that carry
+real risk are called out at the top: **N12** (all-users startup approvals possibly in the wrong
+hive — disabling would silently do nothing), the **`SubscribedContent-NNNNNN` ids** (opaque, can
+change between Windows builds), and **N24** (package names).
 
-- Fill `Whitelists/services.json` — ships empty by design.
-- Flip `approved: true` on bloatware entries you have confirmed and want gone.
-- Decide B1.
+### 4. First manual click-through of the app
+
+This is the new step, and the first time the app will ever have been launched.
+
+```bash
+dotnet run --project src/SystevoTune.App
+```
+
+It requests admin at start (`app.manifest`), so expect a UAC prompt. Walk all four screens:
+
+- **Scan** — do the sizes and current states match what step 3 showed you by hand?
+- **Review** — tick and untick; does the count follow? Is the permanent-deletion warning on the
+  cleanup rows?
+- **Apply** — the confirm dialog must name the restore point. If System Restore is off in the VM,
+  **the warning must be red and you must have to read past it.** That is A6, and it is the one
+  piece of UI behaviour worth deliberately breaking to check.
+- **Results** — freed bytes plausible? Then press **Undo All** and confirm the machine comes back.
+- **Logs and Settings** — do the runs you just made appear? Does switching to Arabic mirror the
+  whole window, not just the text?
+
+Anything that looks wrong is a UI bug, not an engine bug: the engine path underneath was already
+proved by step 2.
 
 ---
 
 ## 7. Honest assessment
 
-**Stronger than last session in one specific way:** the engine no longer assumes. O1 was the bug
-class that would have bitten hardest — a tweak reporting success while silently doing nothing —
-and closing it forced the same defensive shape everywhere else: match at runtime, read numbers not
-words, count things rather than parse prose, and say plainly when we cannot tell.
+**The app is written but unproven in a way the engine no longer is.** Every ViewModel decision is
+tested, and the XAML is deliberately plain because I could not look at it — no custom controls, no
+animation, no layout that needs an eye. What I cannot tell you is whether it *looks* acceptable,
+whether the Arabic layout mirrors cleanly, or whether anything is clipped at 100% scale. Those are
+step 4 above, and I would expect to find several small things.
 
-**The `verify` command is the real deliverable.** Doc 07.2 was a manual procedure nobody would run
-consistently. It is now one command with an exit code, and it refuses to report a false pass when
-nothing was applied.
+**The three bugs UI work surfaced are the argument for having done it.** None of them would have
+appeared from more engine tests: they came from putting the engine behind something that consumes
+it concurrently, holds state across screens, and gets compiled with analyzers on.
 
-**What I am still not confident in:** the 24 undocumented values. That is unchanged, and no amount
-of further research will fix it — Microsoft does not publish them. The VM is the only thing that
-can settle it, which is why the checklist is written the way it is. Until then, treat this as
-well-tested software that may be aimed at some wrong targets.
-
-**Task 9, the WPF scaffold, was not started.** Tasks 1–8 took the session, and 8 was the stated
-priority. Starting a UI project I could not finish and test would have left the repo in a worse
-state than not starting it, so I stopped at a clean, green, fully committed point instead.
+**What has not moved:** the 24 undocumented Windows values are exactly where session 2 left them.
+No amount of app work touches that, and the VM checklist is still the only route.

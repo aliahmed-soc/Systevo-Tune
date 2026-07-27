@@ -5,54 +5,55 @@ Working memory across context resets. Read this first, then `DECISIONS.md`, `BLO
 
 ## Where things stand
 
-**Session 2 complete, 2026-07-27.** Build clean, 0 warnings, **365 tests, 0 failures.**
-Nothing has ever run against the dev machine.
+**Session 3 complete, 2026-07-27.** Build clean, analyzers on, zero warnings.
+**433 tests, 0 failures** (365 engine, 68 app). The app has never been launched.
 
-## Session 2 — done
+## Session 3 — Tier A and Tier B
 
-| # | Task | Commit |
-|---|------|--------|
-| 1 | O1 closed — runtime scheme resolution, reversible creation | `c2aa4db` |
-| 2 | O2–O5 closed | `c280620` |
-| 3 | B3 implemented per decision H1 | `4994a55` |
-| 4 | Session-1 leftovers — only B1 open, needs the human | — |
-| 5 | Privacy module | `6542392` |
-| 6 | Bloatware remover engine | `b222333` |
-| 7 | Re-apply last profile | `708ac0f` |
-| 8 | VM verification harness + `docs/VM-CHECKLIST.md` | `0a5c9a5` |
-| 9 | WPF scaffold — **not started**, optional, out of session time | — |
+| Tier | Item | Commit |
+|---|---|---|
+| A | WPF app, four screens, EN/AR, dark theme, 52 ViewModel tests | `5e0b272` |
+| B | CI, analyzers, portable publish, README, services research | `30faa9d` |
+| B | Log viewer and settings screens | `153d1c3` |
+| — | Shared test doubles extracted to `SystevoTune.TestSupport` | `e49f651` |
 
-## Session 1 — done
+**Tier C not started.** A and B took the session. Parts of C1–C4 landed incidentally — see
+`SESSION-REPORT.md` section 1.
 
-Tasks 0–12: solution, change log, undo engine, restore points, dry-run framework, cleanup, power
-plan, registry tweaks, startup manager, profiles, ConsoleRunner, services support, metrics.
-Then a full documentation pass over every Windows path.
+## Earlier sessions
+
+- **Session 1:** engine — change log, undo, restore points, dry-run framework, cleanup, power
+  plan, registry tweaks, startup, profiles, ConsoleRunner, services support, metrics.
+- **Session 2:** closed O1–O6, implemented B3 (update cache), privacy, bloatware, re-apply, and
+  the VM verification harness + checklist.
 
 ## Next
 
-For the human, in order. Full detail in `SESSION-REPORT.md` section 6.
+For the human. Full detail in `SESSION-REPORT.md` sections 5 and 6.
 
-1. **Review `DECISIONS.md` 31–39.** Especially 31 (Ultimate is never created), 38 (telemetry
-   writes `1`, not `0`), 39 (Spotlight wallpaper left alone), 23 (update cache still out of both
-   profiles).
-2. **`docs/VM-CHECKLIST.md` steps 0–2.** All read-only.
-3. **VM snapshot, then `verify gaming --vm`.** Exit 0 + `PASS` is doc 07.2 satisfied.
-4. Optional: fill `services.json`, approve bloatware entries, decide B1.
+1. **VM snapshot, then `verify gaming --vm`.** Exit 0 + `PASS` satisfies doc 07.2.
+2. **`docs/VM-CHECKLIST.md` steps 0–2.** Settles the 24 undocumented values.
+3. **First manual click-through of all four screens.** The app has never been run. The one
+   behaviour worth deliberately breaking to check: turn System Restore off in the VM and confirm
+   the confirm dialog shows the warning in red and makes you read past it.
+4. **Five open questions** in `SESSION-REPORT.md` section 5 — coverage number, `WSearch`, whether
+   services tuning ships at all, B1 boot time, and the unwired Re-apply button.
 
 ## For a resumed session
 
-- Task 9 (WPF scaffold) is the only unstarted item. Plain controls, MVVM, EN + AR resources,
-  zero visual design. Everything it needs from the Engine already exists — see `EngineHost` in
-  the ConsoleRunner for how the pieces wire together.
-- B1 (boot time) needs a human decision on a NuGet package. Do not add it unasked.
-- 24 values remain undocumented by Microsoft (N1–N24). They cannot be closed by research; the
-  VM checklist is the only route.
+- **Tier C** is untouched and is the obvious next block: C5 (`ARCHITECTURE.md`) and C6 (coverage
+  percentage) are independent of the VM run; C1–C4 want the app to have been looked at first.
+- The **Re-apply button on Results** is enabled but not wired — it needs the confirm-dialog path,
+  which lives in `MainWindow` rather than the view model.
+- The engine stays **frozen** until the VM run: no new tweaks, paths or whitelist entries. Bug
+  fixes with tests are fine.
 
-## Standing rules honoured, both sessions
+## Standing rules honoured, all three sessions
 
-- Nothing ran against this machine. `dotnet build`, `dotnet test`, `git`, file edits only.
-  `C:\ProgramData\SystevoTune` does not exist here; the ConsoleRunner has never been executed.
-- Every system call sits behind an interface with a Real and a Fake. Tests use Fakes only.
+- Nothing has ever run against this machine. Build, test, git, file edits, and one publish (build
+  only). `C:\ProgramData\SystevoTune` does not exist here; neither the ConsoleRunner nor the app
+  has been executed.
+- Tests use Fakes only. All system calls sit behind interfaces.
 - Every path, service name and GUID goes through `windows-verified-paths`, tiered into verified,
   undocumented, and closed questions.
 - No NuGet package beyond the xUnit test template.
