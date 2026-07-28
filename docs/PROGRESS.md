@@ -5,20 +5,19 @@ Working memory across context resets. Read this first, then `DECISIONS.md`, `BLO
 
 ## Where things stand
 
-**Session 3 complete, 2026-07-27.** Build clean, analyzers on, zero warnings.
-**433 tests, 0 failures** (365 engine, 68 app). The app has never been launched.
+**Session 3 complete, 2026-07-27. All three tiers done.** Build clean, analyzers on, zero warnings.
+**461 tests, 0 failures** (365 engine, 96 app). Coverage 65.3% of testable logic, 55.5% overall.
+The app has never been launched.
 
-## Session 3 — Tier A and Tier B
+## Session 3 — Tiers A, B and C
 
 | Tier | Item | Commit |
 |---|---|---|
+| — | Shared test doubles extracted to `SystevoTune.TestSupport` | `e49f651` |
 | A | WPF app, four screens, EN/AR, dark theme, 52 ViewModel tests | `5e0b272` |
 | B | CI, analyzers, portable publish, README, services research | `30faa9d` |
 | B | Log viewer and settings screens | `153d1c3` |
-| — | Shared test doubles extracted to `SystevoTune.TestSupport` | `e49f651` |
-
-**Tier C not started.** A and B took the session. Parts of C1–C4 landed incidentally — see
-`SESSION-REPORT.md` section 1.
+| C | Metrics on Scan, edge states, accessibility checks, architecture doc, coverage | `89258af` |
 
 ## Earlier sessions
 
@@ -41,12 +40,18 @@ For the human. Full detail in `SESSION-REPORT.md` sections 5 and 6.
 
 ## For a resumed session
 
-- **Tier C** is untouched and is the obvious next block: C5 (`ARCHITECTURE.md`) and C6 (coverage
-  percentage) are independent of the VM run; C1–C4 want the app to have been looked at first.
+**There is no more build work queued.** Everything from all three tiers is done, and the next
+meaningful step needs a real machine. Do not invent more features to fill the gap — the project's
+risk is not "too few features", it is "24 Windows values nobody has checked".
+
+Known loose ends, if a session must do something:
+
 - The **Re-apply button on Results** is enabled but not wired — it needs the confirm-dialog path,
-  which lives in `MainWindow` rather than the view model.
+  which lives in `MainWindow` rather than the view model. The one visible control that does
+  nothing.
 - The engine stays **frozen** until the VM run: no new tweaks, paths or whitelist entries. Bug
   fixes with tests are fine.
+- `docs/ARCHITECTURE.md` explains the layout and how to add a tweak, for whoever picks this up.
 
 ## Standing rules honoured, all three sessions
 

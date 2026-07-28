@@ -1,9 +1,9 @@
 # Session Report — autonomous build session 3, 2026-07-27
 
-**Build clean, zero warnings, analyzers on. 433 tests, 0 failures.**
+**Build clean, zero warnings, analyzers on. 461 tests, 0 failures.**
 Nothing was launched. The app has never been run.
 
-Tier A complete. Tier B complete. Tier C not started.
+**All three tiers complete.**
 
 ---
 
@@ -35,37 +35,55 @@ Tier A complete. Tier B complete. Tier C not started.
 | B6 | `docs/SERVICES-WHITELIST-DRAFT.md` | `30faa9d` |
 | B7 | Public README, EN + AR, honest status | `30faa9d` |
 
-### Tier C — not started
+### Tier C — polish
 
-A and B took the session. Nothing from C was begun, so nothing is half-done.
-Some of it landed incidentally while doing A and B:
+| | | Commit |
+|---|---|---|
+| C1 | Keyboard navigation, tab order, Esc/Enter on dialogs | `89258af` |
+| C2 | Accessibility names on every control, contrast computed | `89258af` |
+| C3 | Empty and edge states, including the two that look alike | `89258af` |
+| C4 | Idle RAM and startup app count shown as "before" on Scan | `89258af` |
+| C5 | `docs/ARCHITECTURE.md` | `89258af` |
+| C6 | Coverage measured and reported | `89258af` |
 
-- **C1/C2 partially:** `TabIndex` is set across all screens, `IsDefault`/`IsCancel` are wired on
-  the apply and confirm buttons, `AutomationProperties.Name` is on every interactive control, and
-  the dark theme's contrast ratios are calculated in `Theme/Dark.xaml` (all above WCAG AA).
-- **C3 fully, as it turned out:** empty and edge states were needed to make the ViewModel tests
-  honest — nothing selected, scan finds nothing, everything already applied, undo with no runs.
-- **C4 partially:** `MetricsCollector` is wired into `ScanViewModel.Before`; the values are
-  collected but not yet rendered.
-- **C5, C6:** not done. C6's coverage artifact *is* configured in CI (`--collect:"XPlat Code
-  Coverage"`), but no percentage has been measured — see section 5.
+**C1/C2 are checked, not claimed.** The app cannot be launched here, so "we did an accessibility
+pass" would be an assertion with nothing behind it. `AccessibilityTests` reads the XAML: every
+interactive control has an `AutomationProperties.Name`, every screen sets a tab order, tab indexes
+are unique per screen, the confirm dialog has both `IsDefault` and `IsCancel`, and Stop on the
+apply screen is reachable with Esc. Contrast is computed from WCAG 2.1 relative luminance rather
+than eyeballed.
+
+Both scanners are guarded against passing vacuously — one asserts at least 15 controls were found,
+and the automation-name check was mutation-tested by stripping one attribute (it failed, then
+passed again once restored).
 
 ---
 
 ## 2. Test count and coverage
 
-**433 tests: 365 engine, 68 app.** All green.
+**461 tests: 365 engine, 96 app.** All green.
 
-**Coverage: not measured this session.** CI collects `coverage.cobertura.xml` and uploads it as an
-artifact, so the number will exist after the first CI run — but I did not run a coverage pass
-locally, and quoting a figure I have not seen would be exactly the kind of number doc 01 rules
-out. Read it off the first green build.
+**Coverage: 55.5% overall.** That is the honest headline and the least useful number in this
+report. Split by what can be tested at all:
 
-What I can say without a tool: the engine's decision-making is covered thoroughly (five safety
-guards are mutation-checked — each fails tests when removed). The uncovered surface is the thin
-Windows adapters (`WindowsRegistryService`, `ProcessRunner`, `ScServiceController`, and the
-`Windows*` classes generally) and all XAML. Both are uncovered on purpose: they are the layer that
-cannot be tested without touching the machine, which is what the VM run is for.
+| Layer | Coverage | |
+|---|---|---|
+| App view models + localization | **71.2%** | 585/822 lines |
+| Engine logic | **64.2%** | 2963/4614 |
+| **Testable logic combined** | **65.3%** | 3548/5436 |
+| Windows adapters (`Platform/Windows/*`) | 8.8% | 52/592 — by design |
+| ConsoleRunner (dev harness) | 4.6% | 21/461 |
+| App views + composition root | 0% | XAML code-behind and `AppEngine.Create()` |
+
+The three low rows are the layer that cannot be exercised without a real machine, which is exactly
+what the VM run is for. They are kept as thin as possible so there is little in them to get wrong.
+
+Per the brief I measured rather than chased. If you want the number moved, the honest place to
+look is the ~35% of engine logic that is uncovered — largely guard clauses, exception branches and
+display helpers, not decision-making. The decisions are covered: five safety guards are
+mutation-checked and fail the suite when removed.
+
+CI also uploads `coverage.cobertura.xml` as an artifact on every run.
 
 ---
 
@@ -127,7 +145,7 @@ larger, which is why I wrote the reasons down rather than just complying.
 
 ## 5. Open questions for you
 
-1. **Coverage number.** Not measured (section 2). Read it from the first CI run.
+1. **~~Coverage number~~ — measured, section 2.** 65.3% of testable logic, 55.5% overall.
 2. **`WSearch` in the services draft.** It is the one candidate a user would actually notice —
    Start menu and Explorer search get worse. Arguably a feature, not bloat. My read is it should
    not go in a preset even if you approve it for manual use.
@@ -139,7 +157,9 @@ larger, which is why I wrote the reasons down rather than just complying.
    `System.Diagnostics.EventLog` package. My recommendation is still to drop it.
 5. **Re-apply button on the Results screen** is present and enabled but not yet wired to an action
    — the command needs the same confirm-dialog path as Apply, which lives in the window rather
-   than the view model. Small, but it is a visible control that currently does nothing.
+   than the view model. Small, but it is a visible control that currently does nothing. **This is
+   the one loose end in the app**, and worth knowing before the click-through so you do not report
+   it as a bug.
 
 ---
 
@@ -211,5 +231,14 @@ step 4 above, and I would expect to find several small things.
 appeared from more engine tests: they came from putting the engine behind something that consumes
 it concurrently, holds state across screens, and gets compiled with analyzers on.
 
+**Tier C is thinner than A and B, and should be.** Most of it is verification of things already
+built rather than new capability — which is why it fits in the gap after the main work rather than
+competing with it. The part worth keeping is the two XAML scanners: they turn "we did an
+accessibility pass" from a claim into something that fails the build when it stops being true.
+Everything in C1/C2 is a check on code that already existed.
+
 **What has not moved:** the 24 undocumented Windows values are exactly where session 2 left them.
-No amount of app work touches that, and the VM checklist is still the only route.
+No amount of app work touches that, and the VM checklist is still the only route. Three sessions
+of building have not brought the project one step closer to knowing whether
+`SubscribedContent-338388Enabled` means what we think it means — only the VM can answer that, and
+until it does, this is well-tested software that may be aimed at some wrong targets.
