@@ -236,6 +236,20 @@ Then the manual half of doc 07.2, which the harness cannot do:
 
 ---
 
+## 6. The theme, once you can actually see it
+
+Contrast is measured by tests, but *how it looks* is not something this environment can check —
+the app has never been launched. Three things changed with the brand alignment and want eyes on
+them, in both EN and AR:
+
+- [ ] **Buttons look clickable at rest.** Their border went from `#3A3D46` to `#70737C` because
+      the old one was 1.52:1 and the fill only 1.15:1 — on paper a button was almost invisible.
+      Confirm they now read as buttons, and that the lighter edge is not distracting.
+- [ ] **Focus is obvious when tabbing.** Focus is brand cyan and 2px; hover is brand blue and 1px.
+      Tab through a screen and confirm the two never get confused.
+- [ ] **The blue primary button.** Its label is now white rather than near-black. Check it looks
+      right next to the green Undo All button, which kept its dark label.
+
 ## Not covered by any of this
 
 - **B1, boot time.** Not built; needs your decision on the `System.Diagnostics.EventLog` package.

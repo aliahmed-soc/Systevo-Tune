@@ -1,0 +1,94 @@
+<UserControl x:Class="SystevoTune.App.Views.ReviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="{Binding [Review_Title], Source={StaticResource Loc}}" Style="{StaticResource Heading}" />
+            <TextBlock Text="{Binding [Review_Subtitle], Source={StaticResource Loc}}" Style="{StaticResource Subheading}" />
+            <TextBlock Style="{StaticResource DangerText}"
+                       Text="{Binding Error}"
+                       Visibility="{Binding Error, Converter={StaticResource StringToVisibility}}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="{Binding [Review_Profile], Source={StaticResource Loc}}"
+                       VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox ItemsSource="{Binding Profiles}"
+                      SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                      DisplayMemberPath="NameEn"
+                      AutomationProperties.Name="{Binding [Review_Profile], Source={StaticResource Loc}}"
+                      TabIndex="10" Margin="0,0,12,0" />
+            <Button Content="{Binding [Common_Refresh], Source={StaticResource Loc}}"
+                    Command="{Binding PreviewCommand}" TabIndex="11"
+                    AutomationProperties.Name="{Binding [Common_Refresh], Source={StaticResource Loc}}" />
+            <Button Content="{Binding [Review_SelectAll], Source={StaticResource Loc}}"
+                    Command="{Binding SelectAllCommand}" TabIndex="12"
+                    AutomationProperties.Name="{Binding [Review_SelectAll], Source={StaticResource Loc}}" />
+            <Button Content="{Binding [Review_ClearAll], Source={StaticResource Loc}}"
+                    Command="{Binding ClearAllCommand}" TabIndex="13"
+                    AutomationProperties.Name="{Binding [Review_ClearAll], Source={StaticResource Loc}}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}"
+                           Text="{Binding [Review_NothingToDo], Source={StaticResource Loc}}"
+                           Visibility="{Binding NothingToDo, Converter={StaticResource BoolToVisibility}}" />
+
+                <!-- C3. Everything unticked is a different state from having nothing to offer. -->
+                <TextBlock Style="{StaticResource MutedText}"
+                           Text="{Binding [Review_NothingSelected], Source={StaticResource Loc}}"
+                           Visibility="{Binding NothingSelected, Converter={StaticResource BoolToVisibility}}" />
+
+                <ItemsControl ItemsSource="{Binding Groups}" TabIndex="20">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding TweakName}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,4">
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Content="{Binding Description}"
+                                                              AutomationProperties.Name="{Binding Description}" />
+                                                    <TextBlock Style="{StaticResource MutedText}" Margin="24,2,0,0"
+                                                               Text="{Binding Change.Target}" />
+                                                    <TextBlock Style="{StaticResource DangerText}" Margin="24,2,0,0"
+                                                               Text="{Binding [Review_Permanent], Source={StaticResource Loc}}"
+                                                               Visibility="{Binding IsPermanent, Converter={StaticResource BoolToVisibility}}" />
+                                                    <TextBlock Style="{StaticResource MutedText}" Margin="24,2,0,0"
+                                                               Text="{Binding [Review_NeedsRestart], Source={StaticResource Loc}}"
+                                                               Visibility="{Binding RequiresRestart, Converter={StaticResource BoolToVisibility}}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
+            <Button x:Name="ApplyButton" Style="{StaticResource PrimaryButton}"
+                    Content="{Binding [Review_Apply], Source={StaticResource Loc}}"
+                    IsEnabled="{Binding CanApply}"
+                    Click="OnApplyClick"
+                    IsDefault="True" TabIndex="30"
+                    AutomationProperties.Name="{Binding [Review_Apply], Source={StaticResource Loc}}" />
+            <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource MutedText}"
+                       Text="{Binding SelectedCount}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

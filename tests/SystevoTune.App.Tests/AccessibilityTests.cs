@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace SystevoTune.App.Tests;
 
@@ -141,19 +143,148 @@ public partial class AccessibilityTests
 
     // ---- C2: contrast on the dark theme ----
 
+    /// <summary>The card surface, which is what most things are drawn on.</summary>
+    private const string Surface = "#1E1F24";
+
     [Theory]
-    // Foreground against the card surface #1E1F24, which is what body text actually sits on.
+    // Colours used as TEXT. WCAG 1.4.3 puts the bar at 4.5:1.
     [InlineData("#ECEDEF", "Text")]
     [InlineData("#9EA3AD", "Muted")]
-    [InlineData("#4C9AFF", "Accent")]
     [InlineData("#5BD08A", "Success")]
     [InlineData("#E8C468", "Warning")]
     [InlineData("#FF6B6B", "Danger")]
-    public void Every_theme_foreground_clears_wcag_aa_on_the_card_surface(string foreground, string name)
+    public void Every_theme_text_colour_clears_wcag_aa_on_the_card_surface(string foreground, string name)
     {
-        var ratio = ContrastRatio(foreground, "#1E1F24");
+        var ratio = ContrastRatio(foreground, Surface);
 
         Assert.True(ratio >= 4.5, $"{name} ({foreground}) is {ratio:N2}:1 on the card surface, below AA's 4.5:1");
+    }
+
+    [Theory]
+    // Colours used as BORDERS AND FILLS, never as text. WCAG 1.4.11 puts that bar at 3:1.
+    //
+    // Accent is the Systevo brand blue and measures 3.61:1 here — correct for a UI component,
+    // and it would not clear the text bar. That is why it is never used as text: applying the
+    // right criterion per use is the point, and a blanket 4.5:1 would have forced the brand
+    // colour out of the product for no accessibility gain.
+    [InlineData("#0070F3", "Accent — brand blue")]
+    [InlineData("#22D3EE", "Focus — brand cyan")]
+    [InlineData("#70737C", "ControlBorder")]
+    public void Every_theme_ui_colour_clears_the_non_text_contrast_bar(string colour, string name)
+    {
+        var ratio = ContrastRatio(colour, Surface);
+
+        Assert.True(ratio >= 3.0, $"{name} ({colour}) is {ratio:N2}:1 on the card surface, below 1.4.11's 3:1");
+    }
+
+    [Fact]
+    public void A_button_border_is_visible_against_the_button_it_outlines()
+    {
+        // The card is not the only adjacent colour — the fill inside the border is too, and the
+        // fill is only 1.15:1 different from the card, so the border carries the whole job of
+        // marking a button as a button.
+        var ratio = ContrastRatio("#70737C", "#282A31");
+
+        Assert.True(ratio >= 3.0, $"ControlBorder on the raised fill is {ratio:N2}:1, below 3:1");
+    }
+
+    [Fact]
+    public void The_button_style_uses_the_control_border_rather_than_the_decorative_one()
+    {
+        // Splitting the two borders made it possible to silently undo the fix by pointing buttons
+        // back at the decorative brush, which is 1.52:1 and exempt from the bar. The colours would
+        // still pass their own tests; only the button would go back to being invisible.
+        var xaml = File.ReadAllText(XamlFiles().Single(f => Path.GetFileName(f) == "Dark.xaml"));
+        var buttonStyle = xaml[xaml.IndexOf("<Style TargetType=\"Button\">", StringComparison.Ordinal)..];
+        buttonStyle = buttonStyle[..buttonStyle.IndexOf("</Style>", StringComparison.Ordinal)];
+
+        Assert.Contains("BorderBrush\" Value=\"{StaticResource ControlBorder}", buttonStyle, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void No_ui_only_colour_is_used_as_text_anywhere_in_the_xaml()
+    {
+        // The rule above only holds while it stays true. Accent and Focus are allowed on
+        // BorderBrush and Background; the moment one appears on a Foreground, it is text and the
+        // 3:1 bar no longer applies to it.
+        var offenders = new List<string>();
+
+        foreach (var file in XamlFiles())
+        {
+            foreach (Match match in ForegroundBrush().Matches(File.ReadAllText(file)))
+            {
+                var brush = match.Groups["brush"].Value;
+
+                if (brush is "Accent" or "Focus")
+                {
+                    offenders.Add($"{Path.GetFileName(file)}: Foreground=\"{{StaticResource {brush}}}\"");
+                }
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            "A non-text brush is being used as text:" + Environment.NewLine + string.Join(Environment.NewLine, offenders));
+    }
+
+    [Theory]
+    // Text drawn ON a coloured fill. The fill is the background, so the text bar applies.
+    // The near-black previously used on the primary button measured 4.11:1 and failed this.
+    [InlineData("#FFFFFF", "#0070F3", "primary button label on brand blue")]
+    [InlineData("#0B1220", "#5BD08A", "Undo All label on success green")]
+    [InlineData("#ECEDEF", "#282A31", "secondary button label on raised surface")]
+    public void Every_button_label_clears_aa_against_its_own_fill(string label, string fill, string name)
+    {
+        var ratio = ContrastRatio(label, fill);
+
+        Assert.True(ratio >= 4.5, $"{name}: {ratio:N2}:1, below AA's 4.5:1");
+    }
+
+    [Fact]
+    public void The_accent_and_focus_colours_really_are_taken_from_the_logo()
+    {
+        // Ties the theme to the brand provably rather than by comment. If someone picks a nicer
+        // blue, this fails and they have to decide deliberately.
+        var pixels = LogoColours();
+
+        Assert.Contains("0070F3", pixels);
+        Assert.Contains("22D3EE", pixels);
+    }
+
+    /// <summary>Every distinct opaque colour in the logo, as uppercase RRGGBB.</summary>
+    private static HashSet<string> LogoColours()
+    {
+        var image = new BitmapImage(new Uri(LogoPath()));
+        var converted = new FormatConvertedBitmap(image, PixelFormats.Bgra32, null, 0);
+
+        var stride = converted.PixelWidth * 4;
+        var buffer = new byte[stride * converted.PixelHeight];
+        converted.CopyPixels(buffer, stride, 0);
+
+        var colours = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < buffer.Length; i += 4)
+        {
+            if (buffer[i + 3] < 200)
+            {
+                continue;
+            }
+
+            colours.Add($"{buffer[i + 2]:X2}{buffer[i + 1]:X2}{buffer[i]:X2}");
+        }
+
+        return colours;
+    }
+
+    private static string LogoPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src")))
+        {
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(directory!.FullName, "src", "SystevoTune.App", "Assets", "systevo-logo.png");
     }
 
     [Fact]
@@ -214,4 +345,10 @@ public partial class AccessibilityTests
 
     [GeneratedRegex(@"TabIndex\s*=\s*""(?<value>\d+)""", RegexOptions.ExplicitCapture)]
     private static partial Regex TabIndexAttribute();
+
+    /// <summary>A <c>Foreground="{StaticResource X}"</c> anywhere, including inside a Setter.</summary>
+    [GeneratedRegex(
+        @"(?:Foreground\s*=\s*""|Property\s*=\s*""Foreground""\s*Value\s*=\s*"")\{StaticResource\s+(?<brush>\w+)\}",
+        RegexOptions.ExplicitCapture)]
+    private static partial Regex ForegroundBrush();
 }

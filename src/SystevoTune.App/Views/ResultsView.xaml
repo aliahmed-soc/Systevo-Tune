@@ -1,0 +1,106 @@
+<UserControl x:Class="SystevoTune.App.Views.ResultsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding [Results_Title], Source={StaticResource Loc}}" Style="{StaticResource Heading}" />
+            <TextBlock Text="{Binding [Results_Subtitle], Source={StaticResource Loc}}" Style="{StaticResource Subheading}" />
+
+            <TextBlock Style="{StaticResource DangerText}" Text="{Binding Error}"
+                       Visibility="{Binding Error, Converter={StaticResource StringToVisibility}}" />
+
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="{Binding [Results_NothingApplied], Source={StaticResource Loc}}"
+                       Visibility="{Binding NothingApplied, Converter={StaticResource BoolToVisibility}}" />
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding [Results_Applied], Source={StaticResource Loc}}" />
+                        <TextBlock Grid.Column="1" Text="{Binding AppliedCount}" FontWeight="SemiBold" />
+                    </Grid>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding [Results_Freed], Source={StaticResource Loc}}" />
+                        <TextBlock Grid.Column="1" Text="{Binding FreedSpace}" FontWeight="SemiBold" />
+                    </Grid>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding [Results_Failed], Source={StaticResource Loc}}" />
+                        <TextBlock Grid.Column="1" Text="{Binding FailedCount}" FontWeight="SemiBold" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="{Binding [Results_NeedsRestart], Source={StaticResource Loc}}"
+                       Visibility="{Binding RequiresRestart, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Undo All: doc 06's big button -->
+            <Button Style="{StaticResource BigUndoButton}"
+                    Content="{Binding [Results_UndoAll], Source={StaticResource Loc}}"
+                    Command="{Binding UndoAllCommand}"
+                    HorizontalAlignment="Left" Margin="0,18,0,10"
+                    AutomationProperties.Name="{Binding [Results_UndoAll], Source={StaticResource Loc}}"
+                    TabIndex="50" />
+
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="{Binding [Results_UndoAllBusy], Source={StaticResource Loc}}"
+                       Visibility="{Binding IsUndoing, Converter={StaticResource BoolToVisibility}}" />
+
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="{Binding [Results_UndoNothing], Source={StaticResource Loc}}"
+                       Visibility="{Binding UndoFoundNothing, Converter={StaticResource BoolToVisibility}}" />
+
+            <TextBlock Style="{StaticResource DangerText}" Margin="0,10,0,4"
+                       Text="{Binding [Results_UndoFailedHeader], Source={StaticResource Loc}}"
+                       Visibility="{Binding UndoWasPartial, Converter={StaticResource BoolToVisibility}}" />
+
+            <ItemsControl ItemsSource="{Binding UndoFailures}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Target}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Reason}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Style="{StaticResource MutedText}" Margin="0,10,0,4"
+                       Text="{Binding [Results_UndoPermanentHeader], Source={StaticResource Loc}}"
+                       Visibility="{Binding PermanentChanges.Count, Converter={StaticResource BoolToVisibility}}" />
+
+            <ItemsControl ItemsSource="{Binding PermanentChanges}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" Style="{StaticResource MutedText}" Margin="0,2" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!--
+                Content is bound to ReapplyLabel, not to the raw resource: Results_Reapply is a
+                template with a {0} in it and binding it directly showed the braces.
+            -->
+            <Button Content="{Binding ReapplyLabel}"
+                    HorizontalAlignment="Left" Margin="0,18,0,0"
+                    IsEnabled="{Binding CanReapply}"
+                    Click="OnReapplyClick"
+                    AutomationProperties.Name="{Binding ReapplyLabel}"
+                    TabIndex="51" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>SystevoTune.App</RootNamespace>
+    <AssemblyName>SystevoTune</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\systevo.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Brand assets taken from systevo.vercel.app. Embedded rather than fetched: doc 01 says no
+      cloud and no network, and a portable single-file build has to carry its own logo.
+    -->
+    <Resource Include="Assets\systevo-logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SystevoTune.Engine\SystevoTune.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Language packs ship inside the exe so a portable build is one file. -->
+    <EmbeddedResource Include="Localization\Strings\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SystevoTune.App.Tests" />
+  </ItemGroup>
+
+</Project>

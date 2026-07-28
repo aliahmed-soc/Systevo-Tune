@@ -1,0 +1,71 @@
+<UserControl x:Class="SystevoTune.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="{Binding [Settings_Title], Source={StaticResource Loc}}" Style="{StaticResource Heading}" />
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding [Settings_Language], Source={StaticResource Loc}}"
+                               Style="{StaticResource SectionHeading}" />
+                    <ComboBox ItemsSource="{Binding Languages}"
+                              SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
+                              DisplayMemberPath="NativeName"
+                              HorizontalAlignment="Left"
+                              AutomationProperties.Name="{Binding [Settings_Language], Source={StaticResource Loc}}"
+                              TabIndex="70" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding [Settings_RestorePoint], Source={StaticResource Loc}}"
+                               Style="{StaticResource SectionHeading}" />
+                    <CheckBox IsChecked="{Binding CreateRestorePoint, Mode=TwoWay}"
+                              Content="{Binding [Settings_RestorePoint], Source={StaticResource Loc}}"
+                              AutomationProperties.Name="{Binding [Settings_RestorePoint], Source={StaticResource Loc}}"
+                              TabIndex="71" />
+                    <TextBlock Text="{Binding [Settings_RestorePointOn], Source={StaticResource Loc}}"
+                               Style="{StaticResource MutedText}" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding [Settings_RestorePointOffWarning], Source={StaticResource Loc}}"
+                               Style="{StaticResource DangerText}" Margin="0,8,0,0"
+                               Visibility="{Binding ShowRestorePointWarning, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding [Settings_LogFolder], Source={StaticResource Loc}}"
+                               Style="{StaticResource SectionHeading}" />
+                    <TextBlock Text="{Binding LogFolder}" Style="{StaticResource MutedText}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="{Binding [Settings_About], Source={StaticResource Loc}}"
+                               Style="{StaticResource SectionHeading}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Image Source="../Assets/systevo-logo.png"
+                               Width="40" Height="40" Margin="0,0,12,0"
+                               FlowDirection="LeftToRight"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               AutomationProperties.Name="{Binding [App_Brand], Source={StaticResource Loc}}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding [App_Brand], Source={StaticResource Loc}}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding [App_BrandTagline], Source={StaticResource Loc}}"
+                                       Style="{StaticResource MutedText}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding EngineVersion}" Style="{StaticResource MutedText}" />
+                    <TextBlock Text="{Binding Copyright}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                    <TextBlock Text="{Binding [Settings_NotVerified], Source={StaticResource Loc}}"
+                               Style="{StaticResource DangerText}" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

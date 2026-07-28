@@ -488,3 +488,20 @@ $RECYCLE.BIN/
 
 # Publish output
 artifacts/
+
+# ---------------------------------------------------------------------------
+# Un-ignore things the stock templates above got wrong for this repo.
+# Keep this block last: with gitignore, the last matching rule wins.
+# ---------------------------------------------------------------------------
+
+# The macOS template's "*.app" (bundle directories) also matches our WPF project
+# directory, src/SystevoTune.App. It silently kept the entire app out of the
+# repository - 39 files, so a fresh clone could not build the solution at all.
+# Git will not descend into an excluded directory, so the directory itself has to
+# be re-included; a rule naming the files inside would never be reached.
+!/src/SystevoTune.App/
+
+# The Visual Studio template excludes publish profiles because web ones can hold
+# database passwords. Ours are build configuration - runtime, architecture,
+# single-file - and the README tells people to publish with them, so they ship.
+!**/Properties/PublishProfiles/*.pubxml
