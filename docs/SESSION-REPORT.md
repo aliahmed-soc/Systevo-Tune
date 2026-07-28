@@ -1,6 +1,6 @@
 # Session Report — autonomous build session 3, 2026-07-27
 
-**Build clean, zero warnings, analyzers on. 461 tests, 0 failures.**
+**Build clean, zero warnings, analyzers on. 472 tests, 0 failures.**
 Nothing was launched. The app has never been run.
 
 **All three tiers complete.**
@@ -61,7 +61,7 @@ passed again once restored).
 
 ## 2. Test count and coverage
 
-**461 tests: 365 engine, 96 app.** All green.
+**472 tests: 365 engine, 107 app.** All green.
 
 **Coverage: 55.5% overall.** That is the honest headline and the least useful number in this
 report. Split by what can be tested at all:
@@ -87,9 +87,11 @@ CI also uploads `coverage.cobertura.xml` as an artifact on every run.
 
 ---
 
-## 3. Engine bugs found through UI work
+## 3. Bugs found through UI work
 
-Three, all fixed with tests.
+Six, all fixed with tests. Three engine, three localization.
+
+### Found during Tier A
 
 **1. `Progress<T>` was the wrong tool, and it bit.**
 It captures `SynchronizationContext` at construction and falls back to the **thread pool** when
@@ -114,6 +116,24 @@ Two more things worth recording that were *not* engine bugs:
 - A test asserting an unreadable log folder surfaces an error was untrue — `ChangeLog` treats a
   missing folder as empty, which is right for a PC where nothing has been applied. Replaced rather
   than forced to pass.
+
+### Found by wiring the re-apply button (`7d307b4`)
+
+**4. A duplicate JSON key had been silently overwriting a label.** `Results_Failed` was defined
+twice in both language packs, and `System.Text.Json` takes the last value without complaint — so
+the Results screen's "Changes that failed" label was actually rendering *"Undo could not finish:
+{0}"*. Nothing would have caught this: the packs parsed, key parity passed, and both languages
+were equally wrong. Renamed to `Results_UndoFailed`, and there is now a text-level test for
+duplicate keys.
+
+**5. Two templates were bound straight to XAML, so the braces showed.** The re-apply button
+rendered *"Re-apply {0}"* and the log viewer's torn-line warning did the same. `ILocalizer` gained
+`Format()`, and a test now fails if any XAML binds a resource that still contains a placeholder.
+
+**6. The Settings restore-point toggle was never read.** B4 built the toggle,
+`ConfirmApplyViewModel` supported it, and nothing passed it — the setting silently did nothing.
+Now feeds the confirm dialog, and the choice is written into the run log *before* any change is,
+which is the point: a run that dies halfway still says whether the safety net was there.
 
 **One deliberate engine change, not a bug fix:** `TweakRunner.ApplyAsync` and
 `ProfileApplier.ApplyAsync` gained an optional `IProgress<TweakOutcome>`. A4 requires streaming and
@@ -155,11 +175,9 @@ larger, which is why I wrote the reasons down rather than just complying.
    weak ones.
 4. **B1 (boot time metric)** — still yours, unchanged from session 1. Needs a decision on the
    `System.Diagnostics.EventLog` package. My recommendation is still to drop it.
-5. **Re-apply button on the Results screen** is present and enabled but not yet wired to an action
-   — the command needs the same confirm-dialog path as Apply, which lives in the window rather
-   than the view model. Small, but it is a visible control that currently does nothing. **This is
-   the one loose end in the app**, and worth knowing before the click-through so you do not report
-   it as a bug.
+5. **~~Re-apply button~~ — wired (`7d307b4`).** It goes through the same confirm dialog and
+   restore point as a first apply, re-previews so the count is what would change *now*, and says
+   so rather than opening a dialog when nothing was reset. **No loose ends left in the app.**
 
 ---
 
@@ -211,6 +229,8 @@ It requests admin at start (`app.manifest`), so expect a UAC prompt. Walk all fo
   **the warning must be red and you must have to read past it.** That is A6, and it is the one
   piece of UI behaviour worth deliberately breaking to check.
 - **Results** — freed bytes plausible? Then press **Undo All** and confirm the machine comes back.
+  **Re-apply** should name the profile on the button; press it and the confirm dialog must appear
+  again, not apply straight away.
 - **Logs and Settings** — do the runs you just made appear? Does switching to Arabic mirror the
   whole window, not just the text?
 

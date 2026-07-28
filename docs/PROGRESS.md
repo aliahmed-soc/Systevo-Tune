@@ -6,7 +6,7 @@ Working memory across context resets. Read this first, then `DECISIONS.md`, `BLO
 ## Where things stand
 
 **Session 3 complete, 2026-07-27. All three tiers done.** Build clean, analyzers on, zero warnings.
-**461 tests, 0 failures** (365 engine, 96 app). Coverage 65.3% of testable logic, 55.5% overall.
+**472 tests, 0 failures** (365 engine, 107 app). Coverage 65.3% of testable logic, 55.5% overall.
 The app has never been launched.
 
 ## Session 3 — Tiers A, B and C
@@ -46,9 +46,7 @@ risk is not "too few features", it is "24 Windows values nobody has checked".
 
 Known loose ends, if a session must do something:
 
-- The **Re-apply button on Results** is enabled but not wired — it needs the confirm-dialog path,
-  which lives in `MainWindow` rather than the view model. The one visible control that does
-  nothing.
+- None in the app. The re-apply button was the last one and is wired (`7d307b4`).
 - The engine stays **frozen** until the VM run: no new tweaks, paths or whitelist entries. Bug
   fixes with tests are fine.
 - `docs/ARCHITECTURE.md` explains the layout and how to add a tweak, for whoever picks this up.
