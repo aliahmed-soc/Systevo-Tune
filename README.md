@@ -53,7 +53,9 @@ Logs live in `C:\ProgramData\SystevoTune\logs` — one JSON file per run, readab
 
 ## Build
 
-Needs the [.NET 8 SDK](https://dotnet.microsoft.com/download) on Windows. A .NET 9 SDK works too.
+Needs the [.NET 8 SDK](https://dotnet.microsoft.com/download) or newer, on Windows. The project
+targets `net8.0-windows`; the 9 and 10 SDKs build it fine. There is no `global.json`, so whichever
+SDK you have that is 8 or above gets used.
 
 ```bash
 dotnet build SystevoTune.sln
@@ -149,7 +151,8 @@ it. Doc [08](docs/08-branding-launch.md) explains the rest of the thinking.
 
 ## البناء
 
-يتطلب حزمة تطوير .NET 8 على ويندوز.
+يتطلب حزمة تطوير .NET 8 أو أحدث على ويندوز. المشروع يستهدف `net8.0-windows`، وحزمتا 9 و10 تبنيانه
+بلا مشاكل.
 
 ```
 dotnet build SystevoTune.sln
