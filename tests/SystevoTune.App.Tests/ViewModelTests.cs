@@ -1,4 +1,5 @@
 using System.IO;
+using SystevoTune.App.Localization;
 using SystevoTune.App.ViewModels;
 using SystevoTune.Engine.Cleanup;
 using SystevoTune.Engine.Platform;
@@ -56,6 +57,8 @@ public class ViewModelTests : IDisposable
         _log, handlers.Length > 0 ? handlers : [new RegistryUndoHandler(_registry), new PowerPlanUndoHandler(_powerPlans)]);
 
     private ReapplyService Reapply() => new(_log, _profiles);
+
+    private static ILocalizer NewLocalizer() => new Localizer(Localizer.LoadEmbeddedPacks());
 
     // ================= Scan =================
 
@@ -441,7 +444,7 @@ public class ViewModelTests : IDisposable
         _files.WithFile($@"{UserTemp}\a.tmp", 2048);
         var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
         await apply.RunAsync(_profiles.Find("work")!);
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
 
         model.Load(apply.Result!);
 
@@ -455,7 +458,7 @@ public class ViewModelTests : IDisposable
     {
         var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
         await apply.RunAsync(_profiles.Find("work")!);
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
         model.Load(apply.Result!);
 
         await model.UndoAllAsync();
@@ -477,7 +480,7 @@ public class ViewModelTests : IDisposable
         _registry.FailingDeletes.Add(stuck.ToString());
         _registry.FailingTargets.Add(stuck.ToString());
 
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
         model.Load(apply.Result!);
 
         await model.UndoAllAsync();
@@ -494,7 +497,7 @@ public class ViewModelTests : IDisposable
         _files.WithFile($@"{UserTemp}\a.tmp", 1024);
         var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
         await apply.RunAsync(_profiles.Find("work")!);
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
         model.Load(apply.Result!);
 
         await model.UndoAllAsync();
@@ -506,7 +509,7 @@ public class ViewModelTests : IDisposable
     [Fact]
     public async Task Undo_with_no_runs_on_disk_says_there_was_nothing_to_do()
     {
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
 
         await model.UndoAllAsync();
 
@@ -517,7 +520,7 @@ public class ViewModelTests : IDisposable
     [Fact]
     public async Task Re_apply_is_offered_once_a_profile_has_been_applied()
     {
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
         model.RefreshReapply();
         Assert.False(model.CanReapply);
 
@@ -529,13 +532,95 @@ public class ViewModelTests : IDisposable
         Assert.Equal("gaming", model.LastProfile!.ProfileId);
     }
 
+    // ---- re-apply ----
+
+    [Fact]
+    public async Task The_re_apply_button_names_the_profile_rather_than_showing_a_placeholder()
+    {
+        // Bound straight to the resource this rendered "Re-apply {0}".
+        var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
+        await apply.RunAsync(_profiles.Find("gaming")!);
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
+
+        model.RefreshReapply();
+
+        Assert.Equal("Re-apply gaming", model.ReapplyLabel);
+        Assert.DoesNotContain("{0}", model.ReapplyLabel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void With_nothing_to_re_apply_the_button_says_so_instead_of_naming_nothing()
+    {
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
+
+        model.RefreshReapply();
+
+        Assert.False(model.CanReapply);
+        Assert.Equal("No profile has been applied yet.", model.ReapplyLabel);
+    }
+
+    [Fact]
+    public async Task Re_applying_the_found_profile_writes_only_what_was_reset()
+    {
+        // What the button does once the confirm dialog has been accepted. The window owns the
+        // dialog, so this covers the engine half of the path.
+        var gaming = _profiles.Find("gaming")!;
+        var first = new ApplyViewModel(Applier(), _log, uiContext: null);
+        await first.RunAsync(gaming);
+
+        var visualEffects = _registryTweaks.Find("visual-effects.performance")!.Values[0].ToRef();
+        _registry.SetValue(visualEffects, RegistryValue.Dword(1));
+        _registry.Writes.Clear();
+
+        var results = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
+        results.RefreshReapply();
+        var target = _profiles.Find(results.LastProfile!.ProfileId)!;
+
+        var again = new ApplyViewModel(Applier(), _log, uiContext: null);
+        await again.RunAsync(target);
+
+        Assert.Equal(RegistryValue.Dword(2), _registry.GetValue(visualEffects));
+        Assert.Single(_registry.Writes);
+    }
+
+    // ---- the settings toggle reaches the run ----
+
+    [Fact]
+    public async Task The_restore_point_choice_is_recorded_before_any_change_is()
+    {
+        // B4 said the choice goes in the log for that run. It has to be written first, or a run
+        // that dies halfway would not say whether the safety net was there.
+        var settings = new SettingsViewModel(NewLocalizer(), _log) { CreateRestorePoint = false };
+        var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
+
+        await apply.RunAsync(_profiles.Find("work")!, settings.RecordInto);
+
+        var records = _log.ReadRun(apply.RunId!).Records;
+        Assert.Equal("CreateRestorePointBeforeApply", records[0].Target);
+        Assert.Equal("off", records[0].NewValue);
+        Assert.True(records.Count > 1);
+    }
+
+    [Fact]
+    public async Task A_run_started_without_the_hook_still_works()
+    {
+        var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
+
+        await apply.RunAsync(_profiles.Find("work")!);
+
+        Assert.NotNull(apply.Result);
+        Assert.DoesNotContain(
+            _log.ReadRun(apply.RunId!).Records,
+            record => record.Target == "CreateRestorePointBeforeApply");
+    }
+
     [Fact]
     public async Task Results_reports_needs_restart_from_the_run()
     {
         _registry.With(_registryTweaks.Find("gpu-scheduling.on")!.Values[0].ToRef(), RegistryValue.Dword(1));
         var apply = new ApplyViewModel(Applier(), _log, uiContext: null);
         await apply.RunAsync(_profiles.Find("gaming")!);
-        var model = new ResultsViewModel(Undo(), Reapply());
+        var model = new ResultsViewModel(Undo(), Reapply(), NewLocalizer());
 
         model.Load(apply.Result!);
 

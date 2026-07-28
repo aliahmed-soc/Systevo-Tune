@@ -52,6 +52,8 @@ public class EdgeStateTests : IDisposable
 
     private ProfileApplier Applier() => new(Builder(), _runner);
 
+    private static ILocalizer NewLocalizer() => new Localizer(Localizer.LoadEmbeddedPacks());
+
     // ---- nothing selected ----
 
     [Fact]
@@ -175,7 +177,7 @@ public class EdgeStateTests : IDisposable
     public async Task Undo_with_no_runs_on_disk_reports_nothing_to_do_rather_than_success()
     {
         var model = new ResultsViewModel(
-            new UndoEngine(_log, []), new ReapplyService(_log, _profiles));
+            new UndoEngine(_log, []), new ReapplyService(_log, _profiles), NewLocalizer());
 
         await model.UndoAllAsync();
 
@@ -189,7 +191,7 @@ public class EdgeStateTests : IDisposable
     public void Re_apply_is_not_offered_before_anything_has_been_applied()
     {
         var model = new ResultsViewModel(
-            new UndoEngine(_log, []), new ReapplyService(_log, _profiles));
+            new UndoEngine(_log, []), new ReapplyService(_log, _profiles), NewLocalizer());
 
         model.RefreshReapply();
 
@@ -201,7 +203,7 @@ public class EdgeStateTests : IDisposable
     public void A_results_screen_with_no_run_loaded_reports_nothing_applied()
     {
         var model = new ResultsViewModel(
-            new UndoEngine(_log, []), new ReapplyService(_log, _profiles));
+            new UndoEngine(_log, []), new ReapplyService(_log, _profiles), NewLocalizer());
 
         Assert.True(model.NothingApplied);
         Assert.Equal(0, model.AppliedCount);
@@ -213,7 +215,7 @@ public class EdgeStateTests : IDisposable
     [Fact]
     public async Task An_empty_log_folder_is_distinguishable_from_one_not_yet_read()
     {
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
 
         Assert.False(model.IsEmpty);
 

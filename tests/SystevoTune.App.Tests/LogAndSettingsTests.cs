@@ -24,7 +24,7 @@ public class LogAndSettingsTests : IDisposable
     [Fact]
     public async Task An_empty_log_folder_says_so_rather_than_showing_a_blank_list()
     {
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
 
         await model.RefreshAsync();
 
@@ -34,7 +34,7 @@ public class LogAndSettingsTests : IDisposable
 
     [Fact]
     public void Not_having_looked_yet_is_not_the_same_as_empty()
-        => Assert.False(new LogViewerViewModel(_log).IsEmpty);
+        => Assert.False(new LogViewerViewModel(_log, NewLocalizer()).IsEmpty);
 
     [Fact]
     public async Task Runs_are_listed_newest_first_with_their_records()
@@ -45,7 +45,7 @@ public class LogAndSettingsTests : IDisposable
         var second = _log.StartRun();
         second.RecordChange("PowerPlan", "SetActivePlan", "ActivePowerScheme", "g1", "g2");
 
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
         await model.RefreshAsync();
 
         Assert.Equal(2, model.Runs.Count);
@@ -58,7 +58,7 @@ public class LogAndSettingsTests : IDisposable
     {
         var run = _log.StartRun();
         run.RecordChange("Registry", "SetValue", "HKCU\\A::B", "Dword:3", "Dword:2");
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
 
         await model.RefreshAsync();
 
@@ -73,7 +73,7 @@ public class LogAndSettingsTests : IDisposable
         var run = _log.StartRun();
         run.RecordProfile("gaming");
         run.RecordChange("Registry", "SetValue", "HKCU\\A::B", null, "Dword:1");
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
 
         await model.RefreshAsync();
 
@@ -90,7 +90,7 @@ public class LogAndSettingsTests : IDisposable
         run.RecordChange("Cleanup", "DeleteGroupContents", "temp-files", "files=1;bytes=1", "files=0;bytes=0", undoable: false);
         _log.MarkUndone(run.RunId, pending.Id);
 
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
         await model.RefreshAsync();
 
         var keys = model.Runs[0].Records.Select(record => record.StateKey).ToList();
@@ -103,7 +103,7 @@ public class LogAndSettingsTests : IDisposable
         var run = _log.StartRun();
         run.RecordChange("Registry", "SetValue", "a", "1", "2");
         run.RecordChange("Cleanup", "DeleteGroupContents", "temp-files", "x", "y", undoable: false);
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
 
         await model.RefreshAsync();
 
@@ -117,7 +117,7 @@ public class LogAndSettingsTests : IDisposable
         run.RecordChange("Registry", "SetValue", "a", "1", "2");
         File.AppendAllText(run.FilePath, "{\"id\":\"2026-07-27-002\",\"modu");
 
-        var model = new LogViewerViewModel(_log);
+        var model = new LogViewerViewModel(_log, NewLocalizer());
         await model.RefreshAsync();
 
         Assert.True(model.Runs[0].HasTornLines);
@@ -131,7 +131,7 @@ public class LogAndSettingsTests : IDisposable
         // this is genuinely not an error — the view model's catch is there for a torn folder,
         // which no test can arrange without breaking the file system underneath it.
         var fresh = new LogViewerViewModel(
-            new ChangeLog(Path.Combine(_directory.Path, "never-created"), _clock));
+            new ChangeLog(Path.Combine(_directory.Path, "never-created"), _clock), NewLocalizer());
 
         await fresh.RefreshAsync();
 
@@ -141,7 +141,7 @@ public class LogAndSettingsTests : IDisposable
 
     [Fact]
     public void The_log_folder_is_shown_so_the_user_can_open_it()
-        => Assert.Equal(_directory.Path, new LogViewerViewModel(_log).LogFolder);
+        => Assert.Equal(_directory.Path, new LogViewerViewModel(_log, NewLocalizer()).LogFolder);
 
     // ================= Settings =================
 
@@ -197,6 +197,24 @@ public class LogAndSettingsTests : IDisposable
         model.CurrentLanguage = Language.Arabic;
 
         Assert.Equal("ar", localizer.Current.Code);
+    }
+
+    [Fact]
+    public async Task The_run_summary_and_torn_line_warning_are_filled_in_not_left_as_templates()
+    {
+        // Bound straight to the resource these rendered "{0} change(s), {1} still to undo".
+        var run = _log.StartRun();
+        run.RecordChange("Registry", "SetValue", "a", "1", "2");
+        File.AppendAllText(run.FilePath, "{\"id\":\"x\",\"modu");
+
+        var model = new LogViewerViewModel(_log, NewLocalizer());
+        await model.RefreshAsync();
+
+        var row = model.Runs[0];
+        Assert.DoesNotContain("{0}", row.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("{1}", row.Summary, StringComparison.Ordinal);
+        Assert.Contains("1", row.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", row.TornLinesWarning, StringComparison.Ordinal);
     }
 
     [Fact]

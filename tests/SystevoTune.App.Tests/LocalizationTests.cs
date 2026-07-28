@@ -41,6 +41,35 @@ public partial class LocalizationTests
     }
 
     [Fact]
+    public void No_pack_defines_the_same_key_twice()
+    {
+        // System.Text.Json takes the last value silently, so a duplicate key does not fail to
+        // parse — it quietly replaces one string with another. That is how the Results screen
+        // ended up labelling a count with "Undo could not finish: {0}".
+        foreach (var file in PackFiles())
+        {
+            var keys = KeyDeclaration()
+                .Matches(File.ReadAllText(file))
+                .Select(match => match.Groups["key"].Value)
+                .ToList();
+
+            var duplicates = keys
+                .GroupBy(key => key, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToList();
+
+            Assert.True(
+                duplicates.Count == 0,
+                $"{Path.GetFileName(file)} defines twice: {string.Join(", ", duplicates)}");
+        }
+    }
+
+    [Fact]
+    public void The_duplicate_check_is_reading_real_files()
+        => Assert.Equal(2, PackFiles().Count);
+
+    [Fact]
     public void No_value_in_either_pack_is_blank()
     {
         foreach (var (code, pack) in Packs)
@@ -178,6 +207,56 @@ public partial class LocalizationTests
     }
 
     [Fact]
+    public void No_xaml_binds_a_resource_that_still_has_a_placeholder_in_it()
+    {
+        // The bug this exists to stop: binding a template like "Re-apply {0}" straight to a
+        // Content or Text renders the braces on screen. Both the re-apply button and the log
+        // viewer's torn-line warning shipped that way until it was caught by hand.
+        var templates = Packs["en"]
+            .Where(pair => Placeholder().IsMatch(pair.Value))
+            .Select(pair => pair.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.NotEmpty(templates);
+
+        var offenders = new List<string>();
+
+        foreach (var file in XamlFiles())
+        {
+            foreach (Match match in ResourceBinding().Matches(File.ReadAllText(file)))
+            {
+                var key = match.Groups["key"].Value;
+
+                if (templates.Contains(key))
+                {
+                    offenders.Add($"{Path.GetFileName(file)}: {key} is a template and must be formatted first");
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0, string.Join(Environment.NewLine, offenders));
+    }
+
+    [Fact]
+    public void Formatting_fills_in_the_placeholders()
+    {
+        var localizer = new Localizer(Packs);
+
+        Assert.Equal("Re-apply gaming", localizer.Format("Results_Reapply", "gaming"));
+    }
+
+    [Fact]
+    public void Formatting_a_template_with_a_mangled_placeholder_does_not_take_the_screen_down()
+    {
+        var packs = new Dictionary<string, IReadOnlyDictionary<string, string>>
+        {
+            ["en"] = new Dictionary<string, string> { ["Bad"] = "broken {0" },
+        };
+
+        Assert.Equal("broken {0", new Localizer(packs).Format("Bad", 1));
+    }
+
+    [Fact]
     public void The_scanner_would_actually_catch_something()
     {
         // A scanner that can never fail is worse than no scanner, so prove it flags a literal and
@@ -217,6 +296,24 @@ public partial class LocalizationTests
         return Directory.Exists(app) ? Directory.GetFiles(app, "*.xaml", SearchOption.AllDirectories) : [];
     }
 
+    private static IReadOnlyList<string> PackFiles()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "src")))
+        {
+            directory = directory.Parent;
+        }
+
+        var strings = directory is null
+            ? null
+            : Path.Combine(directory.FullName, "src", "SystevoTune.App", "Localization", "Strings");
+
+        return strings is not null && Directory.Exists(strings)
+            ? Directory.GetFiles(strings, "*.json")
+            : [];
+    }
+
     private static HashSet<string> Placeholders(string text)
         => Placeholder().Matches(text).Select(match => match.Value).ToHashSet(StringComparer.Ordinal);
 
@@ -229,4 +326,12 @@ public partial class LocalizationTests
 
     [GeneratedRegex(@"\{\d+\}")]
     private static partial Regex Placeholder();
+
+    /// <summary>A <c>"Key":</c> declaration at the start of a line in a language pack.</summary>
+    [GeneratedRegex(@"^\s*""(?<key>[A-Za-z_][A-Za-z0-9_]*)""\s*:", RegexOptions.ExplicitCapture | RegexOptions.Multiline)]
+    private static partial Regex KeyDeclaration();
+
+    /// <summary>A <c>{Binding [Key], Source={StaticResource Loc}}</c> anywhere in the XAML.</summary>
+    [GeneratedRegex(@"\{Binding\s*\[(?<key>\w+)\]\s*,\s*Source=\{StaticResource\s+Loc\}\}", RegexOptions.ExplicitCapture)]
+    private static partial Regex ResourceBinding();
 }
