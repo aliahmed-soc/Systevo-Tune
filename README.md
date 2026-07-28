@@ -11,7 +11,7 @@ By [Systevo](https://systevo.vercel.app) — Infrastructure · Security · Autom
 
 > ### Status: not yet verified on a real machine
 >
-> The engine is complete and covered by 417 automated tests, but **it has never run on Windows.**
+> The engine is complete and covered by 492 automated tests, but **it has never run on Windows.**
 > Every registry path, service name and GUID it uses is tracked in
 > [`windows-verified-paths`](.claude/skills/windows-verified-paths/SKILL.md) and split into what
 > Microsoft documents and what it does not. Roughly half of what a tune-up tool touches has no
@@ -98,7 +98,7 @@ _Coming once the first VM click-through is done — the app has not been launche
 src/SystevoTune.Engine          all the real logic, zero UI code
 src/SystevoTune.App             WPF app, MVVM, dark theme
 src/SystevoTune.ConsoleRunner   dev harness, holds the VM verify command
-tests/                          417 tests, all against fakes
+tests/                          492 tests, all against fakes
 docs/                           the plan, decisions, and the VM checklist
 ```
 
@@ -121,7 +121,7 @@ it. Doc [08](docs/08-branding-launch.md) explains the rest of the thinking.
 
 > ### الحالة: لم يتم التحقق منها على جهاز حقيقي بعد
 >
-> المحرك مكتمل ومغطى بـ 417 اختباراً آلياً، لكنه **لم يعمل قط على ويندوز.** كل مسار في الريجستري
+> المحرك مكتمل ومغطى بـ 492 اختباراً آلياً، لكنه **لم يعمل قط على ويندوز.** كل مسار في الريجستري
 > واسم خدمة ومعرّف GUID مسجَّل ومصنَّف حسب ما توثّقه مايكروسوفت وما لا توثّقه. نحو نصف ما تلمسه
 > أداة كهذه ليس له مرجع رسمي من مايكروسوفت.
 >
