@@ -17,13 +17,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Reads the version from global.json rather than repeating it here. The old step asked for
       # 8.0.x and was named for it, but without a global.json the CLI still picked the newest SDK
       # on the runner image — 10.0.301 — so CI was never building on the version it claimed.
       - name: Set up the .NET SDK pinned in global.json
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: artifacts/test-results
@@ -56,7 +56,7 @@ jobs:
       # C6. Measured and published, not chased.
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: artifacts/test-results/**/coverage.cobertura.xml
@@ -69,13 +69,13 @@ jobs:
     needs: build-and-test
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Reads the version from global.json rather than repeating it here. The old step asked for
       # 8.0.x and was named for it, but without a global.json the CLI still picked the newest SDK
       # on the runner image — 10.0.301 — so CI was never building on the version it claimed.
       - name: Set up the .NET SDK pinned in global.json
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -86,7 +86,7 @@ jobs:
         run: dotnet publish src/SystevoTune.ConsoleRunner/SystevoTune.ConsoleRunner.csproj -p:PublishProfile=Portable
 
       - name: Upload portable build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: systevo-tune-portable
           path: artifacts/publish
