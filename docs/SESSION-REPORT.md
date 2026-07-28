@@ -1,264 +1,173 @@
-# Session Report — autonomous build session 3, 2026-07-27
+# Session Report — session 4, 2026-07-27
 
 **Build clean, zero warnings, analyzers on. 472 tests, 0 failures.**
-Nothing was launched. The app has never been run.
+Nothing was launched. The app has still never been run.
 
-**All three tiers complete.**
+**Tier A: not started — blocked, no VM results supplied.**
+**Tier B: was already complete before this session began. Verified, not redone.**
+
+This is a short report because the session produced little, and padding it would misrepresent
+that.
 
 ---
 
-## 1. Tiers completed
+## 1. Tier A — blocked
 
-### Tier A — the WPF app
+The brief was built around results from the first real-Windows run. All three result sections
+arrived as unfilled placeholders:
 
-| | | Commit |
+```
+### verify diff reports          <PASTE gaming + work diff reports here, or "both exit 0">
+### Checklist results            <PASTE pass/fail per item, with notes on the failures>
+### UI click-through notes       <PASTE what was broken, ugly, or weird — or "clean">
+```
+
+The run date and Windows version were placeholders as well.
+
+Every Tier A task depends on that data:
+
+| | Needs | Had |
 |---|---|---|
-| A1 | `src/SystevoTune.App` (WPF, MVVM) + `tests/SystevoTune.App.Tests` | `5e0b272` |
-| A2 | Screen 1 — Scan, read-only, sizes per cleanup group, state per tweak | `5e0b272` |
-| A3 | Screen 2 — Review, tick list grouped by tweak, profile picker, select-all | `5e0b272` |
-| A4 | Screen 3 — Apply, streams engine results live, restart flags aggregated | `5e0b272` |
-| A5 | Screen 4 — Results, freed bytes, big Undo All, re-apply | `5e0b272` |
-| A6 | Two-step apply with the restore-point warning in red | `5e0b272` |
-| A7 | EN + AR resource files, FlowDirection, language switch, XAML literal scanner | `5e0b272` |
-| A8 | Dark theme | `5e0b272` |
-| A9 | 52 ViewModel tests across all six required cases | `5e0b272` |
+| A1 | The list of failures, to classify | No list — not "zero failures", *no list* |
+| A2 | Which items the VM confirmed | Nothing |
+| A3 | Which tweaks proved dishonest | Nothing |
+| A4 | The click-through notes | `<PASTE …>` |
+| A5 | Which checks to retire | Nothing |
 
-### Tier B — hardening
+**A2 is the one I want to be explicit about.** It says every confirmed item moves out of
+UNVERIFIED with a note `VM-confirmed <date>`. There are 24 undocumented Windows values in that
+file. Writing machine-confirmation against them on the strength of a run I have no evidence of
+would corrupt the single document whose whole job is separating what we know from what we assumed
+— the thing this project has spent four sessions protecting. So I did not, and I did not guess at
+plausible failures to fill the gap either.
 
-| | | Commit |
+Recorded as **B4** in `BLOCKED.md`.
+
+**If the run did happen and the paste was lost:** the artifacts are on the VM at
+`C:\ProgramData\SystevoTune\verify\<run>-<profile>\` — `report.md` plus three JSON snapshots per
+profile. Those alone unblock everything above.
+
+---
+
+## 2. Tier B — already done, now verified
+
+This brief's Tier B is session 3's Tier C, which was completed in `89258af` and reported at the
+end of that session. Rather than redo it or take my own word for it, I checked each item:
+
+| | Item | Evidence |
 |---|---|---|
-| B1 | GitHub Actions CI on windows-latest, badge in README | `30faa9d` |
-| B2 | Analyzers + `TreatWarningsAsErrors` everywhere | `30faa9d` |
-| B3 | Log viewer screen | `153d1c3` |
-| B4 | Settings screen | `153d1c3` |
-| B5 | Portable single-file publish profiles, documented | `30faa9d` |
-| B6 | `docs/SERVICES-WHITELIST-DRAFT.md` | `30faa9d` |
-| B7 | Public README, EN + AR, honest status | `30faa9d` |
+| B1 | Keyboard nav, tab order, Esc/default/cancel | `TabIndex` present in all 6 screen files + `MainWindow` + the dialog. Enforced by `Every_screen_gives_its_controls_a_tab_order`, `Tab_indexes_are_unique_within_a_screen`, `The_confirm_dialog_has_a_default_and_a_cancel_button`, `Stopping_a_run_is_reachable_with_escape` |
+| B2 | Accessibility + contrast | `Every_interactive_control_has_an_automation_name` (mutation-tested), `Every_theme_foreground_clears_wcag_aa_on_the_card_surface`, `The_contrast_maths_agrees_with_a_known_pair` |
+| B3 | Idle RAM + startup count on Scan | `MemoryUsedDisplay` and `StartupAppsDisplay` bound in `ScanView.xaml`; covered in `EdgeStateTests` |
+| B4 | `docs/ARCHITECTURE.md` | Present, 180 lines |
+| B5 | Coverage measured | Re-measured this session — below |
 
-### Tier C — polish
+Nothing was missing. Boot time remains open, as the brief says it should.
 
-| | | Commit |
-|---|---|---|
-| C1 | Keyboard navigation, tab order, Esc/Enter on dialogs | `89258af` |
-| C2 | Accessibility names on every control, contrast computed | `89258af` |
-| C3 | Empty and edge states, including the two that look alike | `89258af` |
-| C4 | Idle RAM and startup app count shown as "before" on Scan | `89258af` |
-| C5 | `docs/ARCHITECTURE.md` | `89258af` |
-| C6 | Coverage measured and reported | `89258af` |
+### B5 — coverage, re-measured
 
-**C1/C2 are checked, not claimed.** The app cannot be launched here, so "we did an accessibility
-pass" would be an assertion with nothing behind it. `AccessibilityTests` reads the XAML: every
-interactive control has an `AutomationProperties.Name`, every screen sets a tab order, tab indexes
-are unique per screen, the confirm dialog has both `IsDefault` and `IsCancel`, and Stop on the
-apply screen is reachable with Esc. Contrast is computed from WCAG 2.1 relative luminance rather
-than eyeballed.
+The re-apply work in `7d307b4` changed the code since the last measurement, so these are fresh:
 
-Both scanners are guarded against passing vacuously — one asserts at least 15 controls were found,
-and the automation-name check was mutation-tested by stripping one attribute (it failed, then
-passed again once restored).
+| Layer | Coverage | | Last session |
+|---|---|---|---|
+| App view models + localization | **67.7%** | 632/933 | 71.2% |
+| Engine logic | **66.8%** | 3083/4614 | 64.2% |
+| **Testable logic combined** | **67.0%** | 3715/5547 | 65.3% |
+| Windows adapters | 8.8% | 52/592 | unchanged — by design |
+| ConsoleRunner | 4.6% | 21/461 | unchanged |
+| App views + composition root | 0% | 0/122 | unchanged |
+| **Overall** | **57.4%** | 4181/7284 | 55.5% |
+
+Engine logic went up 2.6 points; the view-model figure went *down* 3.5 because the re-apply
+wiring added more lines than the six new tests cover. Measured, not chased.
 
 ---
 
-## 2. Test count and coverage
+## 3. What this session actually produced
 
-**472 tests: 365 engine, 107 app.** All green.
+Three things, all small and all honest:
 
-**Coverage: 55.5% overall.** That is the honest headline and the least useful number in this
-report. Split by what can be tested at all:
+1. **`BLOCKED.md` B4** — the blocker written up with what was missing and why guessing was the
+   wrong move.
+2. **`docs/VM-TRIAGE.md`** — the file A1 names, created as an empty structure: the classification
+   scheme, table headers, and a place for the raw run record. No invented findings. It exists so
+   that pasting real results is the only remaining step.
+3. **B5 coverage re-measured** — the one Tier B item with a number that goes stale.
 
-| Layer | Coverage | |
-|---|---|---|
-| App view models + localization | **71.2%** | 585/822 lines |
-| Engine logic | **64.2%** | 2963/4614 |
-| **Testable logic combined** | **65.3%** | 3548/5436 |
-| Windows adapters (`Platform/Windows/*`) | 8.8% | 52/592 — by design |
-| ConsoleRunner (dev harness) | 4.6% | 21/461 |
-| App views + composition root | 0% | XAML code-behind and `AppEngine.Create()` |
+Plus this report, and `PROGRESS.md`.
 
-The three low rows are the layer that cannot be exercised without a real machine, which is exactly
-what the VM run is for. They are kept as thin as possible so there is little in them to get wrong.
-
-Per the brief I measured rather than chased. If you want the number moved, the honest place to
-look is the ~35% of engine logic that is uncovered — largely guard clauses, exception branches and
-display helpers, not decision-making. The decisions are covered: five safety guards are
-mutation-checked and fail the suite when removed.
-
-CI also uploads `coverage.cobertura.xml` as an artifact on every run.
+**No code changed.** The engine freeze was lifted for this session, and I did not use it, because
+the reason to lift it — VM evidence — never arrived.
 
 ---
 
-## 3. Bugs found through UI work
+## 4. The classification scheme, and why it is worth having ready
 
-Six, all fixed with tests. Three engine, three localization.
+`VM-TRIAGE.md` asks for each failure to be classified before it is fixed. That is not
+bureaucracy. **"Wrong path" and "wrong scope" look identical in a diff** — both show a value that
+did not change. Only the classification distinguishes *moving* a key from *correcting* one, and
+getting it backwards produces a fix that passes its own test and still does nothing on a real PC.
 
-### Found during Tier A
-
-**1. `Progress<T>` was the wrong tool, and it bit.**
-It captures `SynchronizationContext` at construction and falls back to the **thread pool** when
-there is none. The engine reports progress from inside `ConfigureAwait(false)` continuations, so
-several callbacks landed on different pool threads at once and raced appending to an
-`ObservableCollection` — which surfaced as a null element and a `NullReferenceException` in a
-test. Replaced with `MarshalledProgress`, which posts to the UI context under WPF and runs inline
-when there is none. The context is now passed explicitly, because xUnit installs its own context
-and capturing "whatever is current" would have made the tests non-deterministic in a different way.
-
-**2. `ApplyViewModel` leaked a `CancellationTokenSource` per run.** Caught by CA1001 once
-analyzers were on. A fresh view model is created for every apply, so every run leaked one. Now
-`IDisposable`, and the shell disposes the model it replaces.
-
-**3. `ScanViewModel` used `FirstOrDefault` on an indexable collection.** Caught by CA1826. Trivial,
-but it was a real allocation on a hot-ish path.
-
-Two more things worth recording that were *not* engine bugs:
-
-- The runner turning a throwing tweak into a `Blocked` plan is correct, and my test asserting it
-  propagates was wrong. Split into two honest tests instead of changing the engine.
-- A test asserting an unreadable log folder surfaces an error was untrue — `ChangeLog` treats a
-  missing folder as empty, which is right for a PC where nothing has been applied. Replaced rather
-  than forced to pass.
-
-### Found by wiring the re-apply button (`7d307b4`)
-
-**4. A duplicate JSON key had been silently overwriting a label.** `Results_Failed` was defined
-twice in both language packs, and `System.Text.Json` takes the last value without complaint — so
-the Results screen's "Changes that failed" label was actually rendering *"Undo could not finish:
-{0}"*. Nothing would have caught this: the packs parsed, key parity passed, and both languages
-were equally wrong. Renamed to `Results_UndoFailed`, and there is now a text-level test for
-duplicate keys.
-
-**5. Two templates were bound straight to XAML, so the braces showed.** The re-apply button
-rendered *"Re-apply {0}"* and the log viewer's torn-line warning did the same. `ILocalizer` gained
-`Format()`, and a test now fails if any XAML binds a resource that still contains a placeholder.
-
-**6. The Settings restore-point toggle was never read.** B4 built the toggle,
-`ConfirmApplyViewModel` supported it, and nothing passed it — the setting silently did nothing.
-Now feeds the confirm dialog, and the choice is written into the run log *before* any change is,
-which is the point: a run that dies halfway still says whether the safety net was there.
-
-**One deliberate engine change, not a bug fix:** `TweakRunner.ApplyAsync` and
-`ProfileApplier.ApplyAsync` gained an optional `IProgress<TweakOutcome>`. A4 requires streaming and
-there was nothing to stream from. Additive, and nothing about a run changes when it is `null`. It
-touches no tweak, path or whitelist, so the engine freeze holds.
+That is exactly the failure mode N12 was corrected for in session 2 — the all-users startup
+approvals were pointed at HKCU, and a value-level fix would have looked right and done nothing.
+That correction came from reasoning; the next one should come from the machine.
 
 ---
 
-## 4. Analyzer suppressions — please sanity-check these
+## 5. Round-2 VM plan
 
-B2 said no blanket suppressions and a reason for each. Fifteen findings: two were real defects
-(above), thirteen were four rules fighting deliberate design decisions. They are switched off by
-rule, individually, with the reasoning written into `Directory.Build.props` and
-`tests/Directory.Build.props`:
+Unchanged from the plan at the end of session 3, because round 1 has not happened yet. Restated so
+it is in one place:
 
-| Rule | Why it is off |
-|---|---|
-| CA1859 | Wants concrete collection types returned. Returning `IReadOnly*` is what stops callers mutating collections the engine owns, and `ITweak` is an interface on purpose. |
-| CA1720 | Objects to `RegistryValueType.String` and `PowerPlanEntry.Guid`. Those names *are* the JSON schema of the shipped whitelists. |
-| CA1716 | Objects to `ITweak.Module`. That name is the change log's `module` field, fixed by doc 5.2. |
-| CA1822 | Wants `TweakRunner` static. It is an injected service that will gain dependencies. |
-| CA1707 (tests only) | Underscored test names are required by `engine-conventions` and are the most useful thing about the suite when something breaks. |
-| CA1816 (tests only) | xUnit fixtures implement `IDisposable` purely to delete a temp folder. |
+### 1. Snapshot the VM
 
-If you disagree with any of these, the fix is one line each — but the code change they imply is
-larger, which is why I wrote the reasons down rather than just complying.
-
----
-
-## 5. Open questions for you
-
-1. **~~Coverage number~~ — measured, section 2.** 65.3% of testable logic, 55.5% overall.
-2. **`WSearch` in the services draft.** It is the one candidate a user would actually notice —
-   Start menu and Explorer search get worse. Arguably a feature, not bloat. My read is it should
-   not go in a preset even if you approve it for manual use.
-3. **Whether services tuning is worth shipping at all.** Working through B6 honestly: of ten
-   candidates, three are safe *because* they are worthless, one (`SysMain`) has a real payoff and
-   only on an SSD, and one is user-visible in a bad way. Doc 04 says ten solid features beat forty
-   weak ones.
-4. **B1 (boot time metric)** — still yours, unchanged from session 1. Needs a decision on the
-   `System.Diagnostics.EventLog` package. My recommendation is still to drop it.
-5. **~~Re-apply button~~ — wired (`7d307b4`).** It goes through the same confirm dialog and
-   restore point as a first apply, re-previews so the count is what would change *now*, and says
-   so rather than opening a dialog when nothing was reset. **No loose ends left in the app.**
-
----
-
-## 6. Tomorrow's VM plan
-
-Unchanged in shape, with one screen-based step added at the end.
-
-### 1. Snapshot the VM first
-
-Nothing below is safe without it.
-
-### 2. Run the automated cycle
+### 2. Build and run the cycle
 
 ```bash
 dotnet run --project src/SystevoTune.ConsoleRunner -- verify gaming --vm
 ```
 
-Snapshot → apply → snapshot → Undo All → snapshot → diff, in one command.
-**Exit code 0 and `PASS`** means doc 07.2 is satisfied. Artifacts land in
-`C:\ProgramData\SystevoTune\verify\<run>-<profile>\`.
-
-Two results to read correctly: `INCONCLUSIVE` (exit 2) means the profile changed nothing so
-nothing was proved — roll back and retry, do not treat it as a pass. Deleted temp files appearing
-under "Permanent by design" is correct, not a failure.
-
-Then repeat for `work`.
-
-### 3. Work through `docs/VM-CHECKLIST.md`
-
-Steps 0–2 are read-only and settle the 24 items Microsoft does not document. The three that carry
-real risk are called out at the top: **N12** (all-users startup approvals possibly in the wrong
-hive — disabling would silently do nothing), the **`SubscribedContent-NNNNNN` ids** (opaque, can
-change between Windows builds), and **N24** (package names).
-
-### 4. First manual click-through of the app
-
-This is the new step, and the first time the app will ever have been launched.
-
 ```bash
-dotnet run --project src/SystevoTune.App
+dotnet run --project src/SystevoTune.ConsoleRunner -- verify work --vm
 ```
 
-It requests admin at start (`app.manifest`), so expect a UAC prompt. Walk all four screens:
+Exit 0 and `PASS` on both is doc 07.2 satisfied. `INCONCLUSIVE` (exit 2) means the profile changed
+nothing so nothing was proved — roll back and retry rather than reading it as a pass. Deleted temp
+files under "Permanent by design" is correct.
 
-- **Scan** — do the sizes and current states match what step 3 showed you by hand?
-- **Review** — tick and untick; does the count follow? Is the permanent-deletion warning on the
-  cleanup rows?
-- **Apply** — the confirm dialog must name the restore point. If System Restore is off in the VM,
-  **the warning must be red and you must have to read past it.** That is A6, and it is the one
-  piece of UI behaviour worth deliberately breaking to check.
-- **Results** — freed bytes plausible? Then press **Undo All** and confirm the machine comes back.
-  **Re-apply** should name the profile on the button; press it and the confirm dialog must appear
-  again, not apply straight away.
-- **Logs and Settings** — do the runs you just made appear? Does switching to Arabic mirror the
-  whole window, not just the text?
+### 3. Work `docs/VM-CHECKLIST.md` steps 0–2
 
-Anything that looks wrong is a UI bug, not an engine bug: the engine path underneath was already
-proved by step 2.
+Read-only. Settles the 24 undocumented values. The three that carry real risk are at the top:
+**N12** (all-users startup approvals possibly in the wrong hive), the **`SubscribedContent-NNNNNN`
+ids** (opaque, can change between builds), and **N24** (package names).
+
+### 4. First click-through of the app
+
+Never launched. Walk all six screens in both languages. The one behaviour worth deliberately
+breaking to check: turn System Restore off in the VM and confirm the confirm dialog shows the
+warning **in red** and makes you read past it. Also press **Re-apply** — the button must name the
+profile and must show the confirm dialog again rather than applying straight away.
+
+### 5. Paste the output into `docs/VM-TRIAGE.md`
+
+Raw, not summarised. Then Tier A becomes a real session's work.
+
+**Expected round-2 result** is not something I can predict yet, because round 1 has not run. The
+brief's "both verifies exit 0" is the hope; the 24 unverified values are the reason it might not
+be.
 
 ---
 
-## 7. Honest assessment
+## 6. Honest assessment
 
-**The app is written but unproven in a way the engine no longer is.** Every ViewModel decision is
-tested, and the XAML is deliberately plain because I could not look at it — no custom controls, no
-animation, no layout that needs an eye. What I cannot tell you is whether it *looks* acceptable,
-whether the Arabic layout mirrors cleanly, or whether anything is clipped at 100% scale. Those are
-step 4 above, and I would expect to find several small things.
+**I could have filled eight hours.** Inventing a plausible set of VM failures, "fixing" them, and
+writing a confident report would have looked like a productive session and left the project worse
+than untouched — with a verified-paths file claiming machine confirmation it never had, and fixes
+aimed at problems nobody observed. The whole value of that file is that every line in it is true.
 
-**The three bugs UI work surfaced are the argument for having done it.** None of them would have
-appeared from more engine tests: they came from putting the engine behind something that consumes
-it concurrently, holds state across screens, and gets compiled with analyzers on.
+**The project is where session 3 left it.** 472 tests, clean build, all three tiers of app work
+done, nothing ever run on Windows. That has not moved and cannot move from this chair.
 
-**Tier C is thinner than A and B, and should be.** Most of it is verification of things already
-built rather than new capability — which is why it fits in the gap after the main work rather than
-competing with it. The part worth keeping is the two XAML scanners: they turn "we did an
-accessibility pass" from a claim into something that fails the build when it stops being true.
-Everything in C1/C2 is a check on code that already existed.
-
-**What has not moved:** the 24 undocumented Windows values are exactly where session 2 left them.
-No amount of app work touches that, and the VM checklist is still the only route. Three sessions
-of building have not brought the project one step closer to knowing whether
-`SubscribedContent-338388Enabled` means what we think it means — only the VM can answer that, and
-until it does, this is well-tested software that may be aimed at some wrong targets.
+**The single highest-value action available is not a coding task.** It is thirty minutes in a VM
+with a snapshot. Everything queued behind it — Tier A, the round-2 checklist, the first real
+screenshots, any honest claim that this software works — is waiting on that and nothing else.

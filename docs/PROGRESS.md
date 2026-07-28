@@ -3,6 +3,18 @@
 Working memory across context resets. Read this first, then `DECISIONS.md`, `BLOCKED.md`, and
 `SESSION-REPORT.md`, then continue from **Next**.
 
+## Session 4 — blocked, no code changed
+
+**2026-07-27.** The brief's VM results arrived as unfilled `<PASTE …>` placeholders, so Tier A
+(triage and fix from the real-Windows run) could not start — see `BLOCKED.md` **B4**. Tier B of
+that brief was session 3's Tier C, already complete; verified item by item rather than redone.
+
+Produced: the B4 blocker write-up, `docs/VM-TRIAGE.md` as an empty ready-to-fill structure, and a
+re-measured coverage figure (57.4% overall, 67.0% of testable logic). **No code changed.**
+
+**Nothing further can be built until a VM run is reported.** The engine freeze was lifted for
+session 4 and went unused, because the evidence to justify unfreezing never arrived.
+
 ## Where things stand
 
 **Session 3 complete, 2026-07-27. All three tiers done.** Build clean, analyzers on, zero warnings.
@@ -43,6 +55,12 @@ For the human. Full detail in `SESSION-REPORT.md` sections 5 and 6.
 **There is no more build work queued.** Everything from all three tiers is done, and the next
 meaningful step needs a real machine. Do not invent more features to fill the gap — the project's
 risk is not "too few features", it is "24 Windows values nobody has checked".
+
+**If a brief arrives citing VM results, check they are actually present before acting on them.**
+Session 4's arrived as `<PASTE …>` placeholders. Triaging invented failures, or marking values
+`VM-confirmed` without a run, would corrupt `windows-verified-paths` — the one file whose value is
+that every line in it is true. Say it is blocked and stop; that is the correct outcome, not a
+failure to try.
 
 Known loose ends, if a session must do something:
 

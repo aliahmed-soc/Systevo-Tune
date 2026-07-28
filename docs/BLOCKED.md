@@ -2,6 +2,49 @@
 
 Things that could not be finished, what was tried, and what you need to decide.
 
+## B4 — Session 4's Tier A had no VM results to work from
+
+**The blocker, 2026-07-27.** The session 4 brief was built around results from the first
+real-Windows run. The three result sections arrived as unfilled placeholders:
+
+```
+### verify diff reports
+<PASTE gaming + work diff reports here, or "both exit 0">
+
+### Checklist results (N1–N24 + re-apply check)
+<PASTE pass/fail per item, with notes on the failures>
+
+### UI click-through notes (EN + AR)
+<PASTE what was broken, ugly, or weird — or "clean">
+```
+
+The run date and Windows version were placeholders too (`<DATE>`, `<VERSION/EDITION>`).
+
+**Why I did not proceed anyway.** Every Tier A task needs data that is not here:
+
+- **A1** asks me to triage each FAIL. There are no FAILs listed — not "zero failures", *no list*.
+- **A2** says every VM-CONFIRMED item moves out of UNVERIFIED with a note "VM-confirmed
+  &lt;date&gt;". Writing that against 24 undocumented values on the strength of a run I have no
+  evidence of would poison the one file whose entire job is to separate what we know from what we
+  assumed. Four sessions have been spent keeping that line clean.
+- **A3** asks which tweaks cannot be made to work honestly. That is a finding, not a guess.
+- **A4** asks me to fix UI issues from click-through notes that say `<PASTE …>`.
+- **A5** asks me to strip confirmed items out of the checklist. Removing checks because I imagine
+  they passed is worse than not touching the file.
+
+Guessing at plausible failures would have produced a session's worth of confident-looking work
+built on nothing, and left the verified-paths skill claiming machine confirmation it never had.
+
+**What you need to do:** run the VM cycle and paste the real output. `docs/VM-CHECKLIST.md` is
+still round-1 and unchanged. `docs/VM-TRIAGE.md` now exists as an empty structure ready to take
+the results — classification scheme, table headers, nothing invented.
+
+If the run **did** happen and the paste was simply lost, the artifacts are on the VM at
+`C:\ProgramData\SystevoTune\verify\<run>-<profile>\` — `report.md` plus three JSON snapshots per
+profile. Those alone would unblock Tier A.
+
+---
+
 ## B1 — Boot time metric (task 12)
 
 **Wanted:** boot time as a before/after number, alongside idle RAM and startup app count.
