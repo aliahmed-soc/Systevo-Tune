@@ -19,10 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET 8
+      # Reads the version from global.json rather than repeating it here. The old step asked for
+      # 8.0.x and was named for it, but without a global.json the CLI still picked the newest SDK
+      # on the runner image — 10.0.301 — so CI was never building on the version it claimed.
+      - name: Set up the .NET SDK pinned in global.json
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          global-json-file: global.json
 
       - name: Restore
         run: dotnet restore SystevoTune.sln
@@ -68,10 +71,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET 8
+      # Reads the version from global.json rather than repeating it here. The old step asked for
+      # 8.0.x and was named for it, but without a global.json the CLI still picked the newest SDK
+      # on the runner image — 10.0.301 — so CI was never building on the version it claimed.
+      - name: Set up the .NET SDK pinned in global.json
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          global-json-file: global.json
 
       - name: Publish app
         run: dotnet publish src/SystevoTune.App/SystevoTune.App.csproj -p:PublishProfile=Portable

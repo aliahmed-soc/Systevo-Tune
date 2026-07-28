@@ -37,7 +37,8 @@ dotnet test  SystevoTune.sln
 dotnet run --project src/SystevoTune.ConsoleRunner
 ```
 
-Targets `net8.0-windows`. The 9 and 10 SDKs build it fine.
+Targets `net8.0-windows`. `global.json` pins the SDK to 8.0, so the .NET 8 SDK is required —
+a 9 or 10 SDK on its own will not build it.
 
 ## Working agreements
 
