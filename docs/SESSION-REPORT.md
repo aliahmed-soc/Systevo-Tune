@@ -145,13 +145,13 @@ machine it still gives 9.0.314.
 
 | | Commit |
 |---|---|
-| Systevo logo, app icon, copyright, brand strings in both languages | `9c6fc88` |
-| `.gitignore` fix — the app enters the repository — plus the brand theme alignment | `16605d8` |
-| README test count corrected, 417 → 492 | `2b57e65` |
-| SDK requirement corrected in both languages | `cdd1f12` |
-| `global.json` pin, workflow reads it, step renamed | `e8e78f4` |
-| CI actions off the deprecated Node 20 runtime | `78dba4e` |
-| `global.json` given a real SDK version | `babf9c6` |
+| Systevo logo, app icon, copyright, brand strings in both languages | `b18e76d` |
+| `.gitignore` fix — the app enters the repository — plus the brand theme alignment | `c41a89d` |
+| README test count corrected, 417 → 492 | `234fff0` |
+| SDK requirement corrected in both languages | `1d8409a` |
+| `global.json` pin, workflow reads it, step renamed | `7383e23` |
+| CI actions off the deprecated Node 20 runtime | `aa8601a` |
+| `global.json` given a real SDK version | `0ff0f82` |
 
 Also: `DECISIONS.md` 40–42, `VM-CHECKLIST.md` section 6, and this report.
 
@@ -172,7 +172,7 @@ structure. Nothing in this session touched the engine, a tweak, a registry path 
 
 The round-2 VM plan is unchanged and is not restated here. `VM-CHECKLIST.md` has it step by step,
 which is the copy to actually work from; the session-4 report's prose version is in git history at
-`6dfeb68` if it is wanted. Section 6 of that checklist is new, and covers the three theme changes
+`e3b5d77` if it is wanted. Section 6 of that checklist is new, and covers the three theme changes
 that need human eyes because contrast maths cannot judge them.
 
 In short: snapshot the VM, run `verify gaming --vm` and `verify work --vm`, work the checklist

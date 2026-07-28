@@ -48,11 +48,11 @@ launched.
 
 | Tier | Item | Commit |
 |---|---|---|
-| — | Shared test doubles extracted to `SystevoTune.TestSupport` | `e49f651` |
-| A | WPF app, four screens, EN/AR, dark theme, 52 ViewModel tests | `5e0b272` |
-| B | CI, analyzers, portable publish, README, services research | `30faa9d` |
-| B | Log viewer and settings screens | `153d1c3` |
-| C | Metrics on Scan, edge states, accessibility checks, architecture doc, coverage | `89258af` |
+| — | Shared test doubles extracted to `SystevoTune.TestSupport` | `0279524` |
+| A | WPF app, four screens, EN/AR, dark theme, 52 ViewModel tests | `56e40d3` |
+| B | CI, analyzers, portable publish, README, services research | `0af746f` |
+| B | Log viewer and settings screens | `9366951` |
+| C | Metrics on Scan, edge states, accessibility checks, architecture doc, coverage | `7701f7f` |
 
 ## Earlier sessions
 
@@ -75,7 +75,7 @@ For the human. `VM-CHECKLIST.md` is the working copy; `SESSION-REPORT.md` sectio
    been seen by anyone.
 5. **Open questions for the human** — `WSearch`, whether services tuning ships at all, B1 boot time
    (needs a decision on the `System.Diagnostics.EventLog` package), and which bloatware entries to
-   approve. The Re-apply button is wired (`7d307b4`); earlier notes listing it as open were stale.
+   approve. The Re-apply button is wired (`58efb37`); earlier notes listing it as open were stale.
 
 ## For a resumed session
 
@@ -96,7 +96,7 @@ without anyone reading it. If a check is failing, find out why before doing anyt
 
 Known loose ends, if a session must do something:
 
-- None in the app. The re-apply button was the last one and is wired (`7d307b4`).
+- None in the app. The re-apply button was the last one and is wired (`58efb37`).
 - The engine stays **frozen** until the VM run: no new tweaks, paths or whitelist entries. Bug
   fixes with tests are fine.
 - `docs/ARCHITECTURE.md` explains the layout and how to add a tweak, for whoever picks this up.
