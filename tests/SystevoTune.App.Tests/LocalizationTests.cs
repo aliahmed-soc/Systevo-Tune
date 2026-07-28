@@ -81,18 +81,57 @@ public partial class LocalizationTests
         }
     }
 
+    /// <summary>
+    /// Keys that are legitimately the same in both languages.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately tiny and explicit. The rule below exists because a pack that passes the
+    /// completeness check by copying English is worse than an obvious gap — so the only way past
+    /// it is to name the key here and say why.
+    /// <list type="bullet">
+    /// <item><c>App_Brand</c> — a company name, not a word. Systevo is Systevo in both.</item>
+    /// <item><c>App_Copyright</c> — Systevo's own line, and it reads identically on both the
+    /// English and Arabic versions of systevo.vercel.app. Translating a legal notice they publish
+    /// untranslated would be us inventing their wording.</item>
+    /// </list>
+    /// </remarks>
+    private static readonly string[] SameInBothLanguages = ["App_Brand", "App_Copyright"];
+
     [Fact]
     public void Arabic_is_actually_translated_rather_than_copied_english()
     {
         // A pack that passes the completeness check by copying English would be worse than an
         // obvious gap, because nothing would flag it.
         var identical = Packs["en"]
+            .Where(pair => !SameInBothLanguages.Contains(pair.Key, StringComparer.Ordinal))
             .Where(pair => Packs["ar"].TryGetValue(pair.Key, out var arabic)
                            && string.Equals(arabic, pair.Value, StringComparison.Ordinal))
             .Select(pair => pair.Key)
             .ToList();
 
         Assert.Empty(identical);
+    }
+
+    [Fact]
+    public void The_exemption_list_stays_short_and_every_entry_on_it_is_genuinely_identical()
+    {
+        // Two guards in one. An exemption that is no longer needed should be removed, and the
+        // list must not quietly grow into a way of skipping translation work.
+        Assert.True(SameInBothLanguages.Length <= 3, "The exemption list is growing — is each one really untranslatable?");
+
+        foreach (var key in SameInBothLanguages)
+        {
+            Assert.Equal(Packs["en"][key], Packs["ar"][key]);
+        }
+    }
+
+    [Fact]
+    public void The_copyright_line_is_systevos_own_wording()
+    {
+        // Taken verbatim from systevo.vercel.app. If the brand changes it, this fails and someone
+        // has to go and look rather than guess.
+        Assert.Equal("© 2026 Systevo", Packs["en"]["App_Copyright"]);
+        Assert.Equal("© 2026 Systevo", Packs["ar"]["App_Copyright"]);
     }
 
     [Fact]

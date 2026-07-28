@@ -15,6 +15,18 @@
   </PropertyGroup>
 
   <!--
+    Assembly metadata. The copyright line is Systevo's own, taken verbatim from
+    systevo.vercel.app — it is what Windows shows in the file properties of the shipped exe, and
+    doc 08 wants an unsigned system tool to be as identifiable as it can be.
+  -->
+  <PropertyGroup>
+    <Company>Systevo</Company>
+    <Authors>Systevo</Authors>
+    <Product>Systevo Tune</Product>
+    <Copyright>© 2026 Systevo</Copyright>
+  </PropertyGroup>
+
+  <!--
     Four rules are switched off deliberately. Every other analyzer warning is an error, and these
     are listed individually rather than by turning analysis down, so adding a fifth is a visible
     decision rather than a quiet slide.

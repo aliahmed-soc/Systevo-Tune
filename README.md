@@ -1,8 +1,11 @@
+<img src="src/SystevoTune.App/Assets/systevo-logo.png" width="72" alt="Systevo" align="left" />
+
 # Systevo Tune
 
 [![CI](https://github.com/aliahmed-soc/Systevo-Tune/actions/workflows/ci.yml/badge.svg)](https://github.com/aliahmed-soc/Systevo-Tune/actions/workflows/ci.yml)
 
 A Windows PC tune-up tool with Gaming and Work profiles, in English and Arabic.
+By [Systevo](https://systevo.vercel.app) — Infrastructure · Security · Automation.
 
 **The promise the whole thing rests on: no change it makes can be permanent.**
 
@@ -104,6 +107,8 @@ docs/                           the plan, decisions, and the VM checklist
 Open source because a tool that edits system settings should be readable by the people running
 it. Doc [08](docs/08-branding-launch.md) explains the rest of the thinking.
 
+© 2026 Systevo
+
 ---
 
 <div dir="rtl" lang="ar">
@@ -150,5 +155,7 @@ it. Doc [08](docs/08-branding-launch.md) explains the rest of the thinking.
 dotnet build SystevoTune.sln
 dotnet test  SystevoTune.sln
 ```
+
+© 2026 Systevo
 
 </div>
