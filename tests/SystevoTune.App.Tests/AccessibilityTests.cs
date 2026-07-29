@@ -188,6 +188,34 @@ public partial class AccessibilityTests
         Assert.True(ratio >= 3.0, $"ControlBorder on the raised fill is {ratio:N2}:1, below 3:1");
     }
 
+    [Theory]
+    [InlineData("ComboBox")]
+    [InlineData("ComboBoxItem")]
+    public void Controls_that_draw_their_own_chrome_set_both_a_foreground_and_a_background(string control)
+    {
+        // Found on the VM's first run: the language switcher looked empty. It was not empty — the
+        // ComboBox style set only font and padding, so the control kept WPF's default light
+        // chrome, while the implicit TextBlock style above it paints every TextBlock #ECEDEF.
+        // The selected language rendered near-white on near-white, and the language therefore
+        // could not be changed at all.
+        //
+        // Contrast maths cannot catch this, because the theme never declared the background it
+        // was actually drawn on. The only defence is requiring both halves of the pair.
+        var xaml = File.ReadAllText(XamlFiles().Single(f => Path.GetFileName(f) == "Dark.xaml"));
+        var start = xaml.IndexOf($"<Style TargetType=\"{control}\">", StringComparison.Ordinal);
+
+        Assert.True(start >= 0, $"The theme has no style for {control}");
+
+        var body = xaml[start..xaml.IndexOf("</Style>", start, StringComparison.Ordinal)];
+
+        Assert.True(
+            body.Contains("Property=\"Foreground\"", StringComparison.Ordinal),
+            $"{control} sets no Foreground, so it inherits one that may not suit its background");
+        Assert.True(
+            body.Contains("Property=\"Background\"", StringComparison.Ordinal),
+            $"{control} sets no Background, so it keeps WPF's light default under near-white text");
+    }
+
     [Fact]
     public void The_button_style_uses_the_control_border_rather_than_the_decorative_one()
     {
