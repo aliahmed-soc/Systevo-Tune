@@ -32,6 +32,7 @@
   "Scan_TweaksHeader": "Settings",
   "Scan_TotalFreeable": "Total that can be freed",
   "Scan_FilesFound": "{0} files",
+  "Scan_NotInAnyProfile": "Not cleaned by either profile, so it is not in the total.",
   "Scan_NothingToClean": "Nothing to clean up. This PC is already tidy.",
   "Scan_NothingToChange": "Every setting is already where this profile wants it.",
   "Scan_Empty": "Nothing found. Try scanning again.",

@@ -65,11 +65,23 @@ internal static class Commands
     {
         var report = host.Cleanup.Scan();
 
+        // Only groups a profile actually cleans belong in the total. The whitelist scans more than
+        // the profiles use, so totalling everything advertised 1.3 GB on the VM where an apply
+        // freed about 15 MB. See decision 23 and V9.
+        var cleanedByAProfile = host.Profiles.Profiles
+            .SelectMany(profile => profile.Steps)
+            .Where(step => step.Kind is ProfileStepKind.Cleanup)
+            .Select(step => step.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         Console.WriteLine("Cleanup scan");
         foreach (var group in report.Groups)
         {
+            var counted = cleanedByAProfile.Contains(group.GroupId);
+
             Console.WriteLine(
-                $"  {group.NameEn,-24} {group.HumanSize,10}  ({group.FileCount} files)");
+                $"  {group.NameEn,-24} {group.HumanSize,10}  ({group.FileCount} files)"
+                    + (counted ? string.Empty : "   not in any profile, not counted"));
 
             foreach (var rejected in group.RejectedPaths)
             {
@@ -77,7 +89,11 @@ internal static class Commands
             }
         }
 
-        Console.WriteLine($"  {"Total",-24} {report.HumanTotal,10}  ({report.TotalFiles} files)");
+        var countedGroups = report.Groups.Where(group => cleanedByAProfile.Contains(group.GroupId)).ToList();
+
+        Console.WriteLine(
+            $"  {"Total",-24} {CleanupScanReport.Humanise(countedGroups.Sum(group => group.TotalBytes)),10}"
+                + $"  ({countedGroups.Sum(group => group.FileCount)} files)");
         return 0;
     }
 

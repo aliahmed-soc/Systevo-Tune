@@ -8,7 +8,7 @@ using SystevoTune.Engine.Tweaks;
 namespace SystevoTune.App.ViewModels;
 
 /// <summary>One cleanup group on the scan screen.</summary>
-public sealed class CleanupGroupRow(string name, string humanSize, int fileCount, long bytes)
+public sealed class CleanupGroupRow(string name, string humanSize, int fileCount, long bytes, bool countedInTotal)
 {
     /// <summary>Group name in the current language.</summary>
     public string Name { get; } = name;
@@ -21,6 +21,21 @@ public sealed class CleanupGroupRow(string name, string humanSize, int fileCount
 
     /// <summary>Raw size, for totals and sorting.</summary>
     public long Bytes { get; } = bytes;
+
+    /// <summary>
+    /// Whether any profile actually cleans this group, and therefore whether it belongs in the
+    /// total.
+    /// </summary>
+    /// <remarks>
+    /// The Windows Update cache is scanned but deliberately in no profile (decision 23), so it is
+    /// shown — hiding 1.3 GB of real disk use would be its own kind of dishonesty — but it is not
+    /// counted. Before this, the scan screen offered a total of 1.3 GB where applying a profile
+    /// freed about 15 MB.
+    /// </remarks>
+    public bool CountedInTotal { get; } = countedInTotal;
+
+    /// <summary>Inverse of <see cref="CountedInTotal"/>, for the explanatory note's visibility.</summary>
+    public bool ExcludedFromTotal => !CountedInTotal;
 }
 
 /// <summary>One tweak's current state on the scan screen.</summary>
@@ -199,13 +214,29 @@ public sealed class ScanViewModel : ObservableObject
             Tweaks.Clear();
 
             var scan = _cleanup.Scan();
+
+            // Only groups a profile actually cleans belong in the total. The whitelist scans more
+            // than the profiles use — the Windows Update cache is scanned and deliberately in
+            // neither profile (decision 23) — and counting it advertised 1.3 GB where an apply
+            // freed about 15 MB.
+            var cleanedByAProfile = _profiles.Profiles
+                .SelectMany(candidate => candidate.Steps)
+                .Where(step => step.Kind is ProfileStepKind.Cleanup)
+                .Select(step => step.Id)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             foreach (var group in scan.Groups)
             {
-                CleanupGroups.Add(new CleanupGroupRow(group.NameEn, group.HumanSize, group.FileCount, group.TotalBytes));
+                CleanupGroups.Add(new CleanupGroupRow(
+                    group.NameEn,
+                    group.HumanSize,
+                    group.FileCount,
+                    group.TotalBytes,
+                    cleanedByAProfile.Contains(group.GroupId)));
             }
 
-            TotalFreeableBytes = scan.TotalBytes;
-            TotalFreeable = scan.HumanTotal;
+            TotalFreeableBytes = CleanupGroups.Where(row => row.CountedInTotal).Sum(row => row.Bytes);
+            TotalFreeable = CleanupScanReport.Humanise(TotalFreeableBytes);
 
             // Preview against the first profile, purely to read current state. Nothing is applied.
             var profile = _profiles.Profiles.Count > 0 ? _profiles.Profiles[0] : null;

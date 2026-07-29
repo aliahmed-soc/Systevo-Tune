@@ -78,6 +78,27 @@ public class ViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task A_cleanup_group_no_profile_cleans_is_shown_but_kept_out_of_the_total()
+    {
+        // The VM's scan screen offered "Total that can be freed — 1.3 GB", of which 1.3 GB was the
+        // Windows Update cache, which neither profile touches (decision 23). Applying a profile
+        // freed about 15 MB. Showing the group is right — it is real disk use — but counting it is
+        // a promise the product does not keep.
+        _files.WithFile($@"{UserTemp}\a.tmp", 4096);
+        _files.WithFile(@"C:\FakeWindows\SoftwareDistribution\Download\big.cab", 999_999);
+
+        var model = new ScanViewModel(Cleanup(), _runner, Builder(), _profiles);
+        await model.ScanAsync();
+
+        var updateCache = model.CleanupGroups.Single(row => row.Bytes == 999_999);
+        var temp = model.CleanupGroups.Single(row => row.Bytes == 4096);
+
+        Assert.True(updateCache.ExcludedFromTotal, "the update cache is in no profile and must not be counted");
+        Assert.True(temp.CountedInTotal, "temp files are in both profiles and must be counted");
+        Assert.Equal(4096, model.TotalFreeableBytes);
+    }
+
+    [Fact]
     public async Task Scan_changes_nothing()
     {
         _files.WithFile($@"{UserTemp}\a.tmp", 4096);

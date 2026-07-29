@@ -32,6 +32,7 @@
   "Scan_TweaksHeader": "الإعدادات",
   "Scan_TotalFreeable": "إجمالي ما يمكن تحريره",
   "Scan_FilesFound": "{0} ملف",
+  "Scan_NotInAnyProfile": "لا ينظّفه أيٌّ من الملفَّين، لذلك لا يدخل في الإجمالي.",
   "Scan_NothingToClean": "لا يوجد ما يُنظَّف. الجهاز مرتب بالفعل.",
   "Scan_NothingToChange": "كل الإعدادات مضبوطة بالفعل كما يريدها هذا الملف.",
   "Scan_Empty": "لم يُعثر على شيء. جرّب الفحص مرة أخرى.",

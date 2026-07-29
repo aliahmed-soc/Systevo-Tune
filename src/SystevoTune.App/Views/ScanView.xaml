@@ -54,14 +54,24 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Style="{StaticResource Card}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Name}" />
-                                <TextBlock Grid.Column="1" Text="{Binding HumanSize}" FontWeight="SemiBold" />
-                            </Grid>
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding HumanSize}" FontWeight="SemiBold" />
+                                </Grid>
+                                <!--
+                                    Shown but not counted. Saying why beats leaving the reader to
+                                    wonder whether the total is simply wrong.
+                                -->
+                                <TextBlock Style="{StaticResource MutedText}"
+                                           Margin="0,4,0,0"
+                                           Text="{Binding [Scan_NotInAnyProfile], Source={StaticResource Loc}}"
+                                           Visibility="{Binding ExcludedFromTotal, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
