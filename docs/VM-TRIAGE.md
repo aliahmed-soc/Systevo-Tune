@@ -71,6 +71,29 @@ Windows 11 22H2 Pro — reversibility, which is the product promise. It does **n
 have their intended *effect*; a value can be written and reverted correctly while doing nothing
 useful. Efficacy is what `VM-CHECKLIST.md` section 1 checks independently, and that is still to run.
 
+### Undo through the GUI — PASS, 2026-07-29 05:21
+
+The `verify` runs exercise the engine's undo directly. The app reaches it by a different path, and
+that path had never run. Applied Gaming from the app at 05:11 (21 records), then pressed
+**"Undo everything"** on the Results screen:
+
+```
+run-2026-07-29_05-11-38.jsonl  written 05:11:39, rewritten 05:21:59  records 21  undone=true 17
+```
+
+Independently checked against Windows afterwards, not against our own report — 12 registry values
+and the power scheme, all correct:
+
+- `5b7e1a90…` (High performance) **deleted**, not just deactivated; Balanced sole and active.
+- Values that existed before are back at their original data: `EnableTransparency` 1,
+  `MinAnimate` "1", `GameDVR_Enabled` 1, and the four ContentDeliveryManager values at 1.
+- Values that did **not** exist before were **removed** rather than zeroed: `VisualFXSetting`,
+  `AutoGameModeEnabled`, `AllowGameDVR`, `AllowTelemetry` all absent again. This is the harder half
+  of undo and the half a naive implementation gets wrong by writing a default instead of deleting.
+
+The `05-12` run still shows `undone=true 0`, which is correct: its only non-metadata record is a
+permanent temp-file deletion, so there was nothing there to reverse.
+
 **Edition note, and a checklist bug.** Step 0 asks for `(Get-ComputerInfo).WindowsProductName`,
 which returned **"Windows 10 Pro"** on a machine whose build number is **22621 — Windows 11 22H2**.
 That string comes from the registry's `ProductName`, which Microsoft never updated for Windows 11,
@@ -122,7 +145,10 @@ Paste `report.md` from `C:\ProgramData\SystevoTune\verify\<run>-<profile>\` for 
 
 | V7 | **The Startup feature misses most real startup items.** | Task Manager lists Microsoft 365 Copilot, SecurityHealthSystray, Terminal and Xbox. Our `startup` command found **only SecurityHealth**, plus a phantom (V1) and two `desktop.ini` files (V2). Terminal and Xbox are packaged apps whose startup state lives under `HKCU\Software\Classes\Local Settings\...\AppModel\SystemAppData\<family>\<task>`, and `StartupKind` has no such case — grepping the Engine for `StartupTask`/`AppModel`/`SystemAppData` returns nothing. Their "Disabled" status in Task Manager proves the approvals exist somewhere we never read. | wrong scope | Real engine work: add a packaged-startup-task location, or narrow the product claim. The path is undocumented and must go through `windows-verified-paths` first. | **open — largest finding of the run** |
 
-| V8 | **The WPF app crashed on every launch. It had never once started.** | First launch produced `XamlParseException → IOException: Cannot locate resource 'assets/systevo.ico'` at `MainWindow.InitializeComponent()`. `MainWindow.xaml` sets `Icon="Assets/systevo.ico"`, but the csproj declared only the PNG as a `<Resource>`. `ApplicationIcon` is a different mechanism: it stamps the exe's Win32 icon and embeds nothing WPF can load. 100% reproducible, no workaround, the app was completely dead. | wrong scope | Added `<Resource Include="Assets\systevo.ico" />`. Verified in the compiled `SystevoTune.g.resources`, which now lists `systevo.ico` alongside `systevo-logo.png`. | **fixed** |
+| V8 | **The WPF app crashed on every launch. It had never once started.** | First launch produced `XamlParseException → IOException: Cannot locate resource 'assets/systevo.ico'` at `MainWindow.InitializeComponent()`. `MainWindow.xaml` sets `Icon="Assets/systevo.ico"`, but the csproj declared only the PNG as a `<Resource>`. `ApplicationIcon` is a different mechanism: it stamps the exe's Win32 icon and embeds nothing WPF can load. 100% reproducible, no workaround, the app was completely dead. | wrong scope | Added `<Resource Include="Assets\systevo.ico" />`. Verified three ways: the compiled `SystevoTune.g.resources` now lists `systevo.ico`; the published exe grew by 2,096 bytes, near enough the icon's 2,129; and **the rebuilt binary launched successfully on the same VM that produced the crash**. | **fixed, confirmed on the VM** |
+
+| V9 | `scan` advertises 1.3 GB that no profile will ever reclaim | `scan` reports `Windows Update cache 1.3 GB (11537 files)` and a `Total 1.3 GB`. Neither profile includes that group — `gaming.json` and `work.json` both carry the comment "windows-update-cache is deliberately absent — see decision 23". Confirmed on the VM: after a full Gaming apply through the app, `SoftwareDistribution\Download` was byte-for-byte unchanged at 1,403,192,089. So the headline total is dominated by a group the product never touches, and a real apply reclaimed about 16 MB of the 1.3 GB offered. | works but detection wrong (presentation) | The code is correct and decision 23 stands. `scan` must not total a group no profile cleans — either mark it as not-in-any-profile or separate the totals. | open |
+| V10 | The change log records the restore-point *intent* but never its *outcome* | Both app runs logged `RestorePointSetting → on`, and nothing else about restore points. System Restore is off on this VM (V6), so no restore point can have been created — yet the permanent record says only "on". `ConfirmApplyViewModel` does capture the `RestorePointResult` and picks a message key for `Disabled`/`Skipped`/`Failed`, but that result is shown in the dialog and then discarded; `SettingsViewModel` writes the setting, and no one writes the result. Anyone reading `run-*.jsonl` later would reasonably conclude a restore point exists. | wrong scope | Write the `RestorePointResult` into the run log as a metadata record, next to the setting. The log is the artifact that survives the dialog. | open |
 
 **Why nothing caught V8, which is the part worth learning from.** The app built clean, published
 clean, passed CI twice, and passed nine dedicated branding tests. Every one of those tests asserted
