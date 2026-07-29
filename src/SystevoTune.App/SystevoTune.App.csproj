@@ -19,6 +19,14 @@
       cloud and no network, and a portable single-file build has to carry its own logo.
     -->
     <Resource Include="Assets\systevo-logo.png" />
+    <!--
+      The .ico needs to be BOTH. ApplicationIcon above sets the exe's Win32 icon, which is what
+      Explorer and the taskbar read; it embeds nothing WPF can load. MainWindow.xaml also sets
+      Icon="Assets/systevo.ico" for the title bar, and that needs a real WPF resource. Without
+      this line the app built, published and passed CI, then died on every launch with
+      "Cannot locate resource 'assets/systevo.ico'".
+    -->
+    <Resource Include="Assets\systevo.ico" />
   </ItemGroup>
 
   <ItemGroup>

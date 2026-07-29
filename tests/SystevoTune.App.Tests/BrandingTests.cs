@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using SystevoTune.App.Localization;
@@ -13,7 +14,7 @@ namespace SystevoTune.App.Tests;
 /// the build, it just renders as a blank box on someone's screen — and this app is never launched
 /// in this environment, so nobody would see it until the VM run.
 /// </remarks>
-public class BrandingTests
+public partial class BrandingTests
 {
     private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> Packs =
         Localizer.LoadEmbeddedPacks();
@@ -131,6 +132,55 @@ public class BrandingTests
         // check exempts brand keys from.
         Assert.Matches(@"[؀-ۿ]", Packs["ar"]["App_BrandTagline"]);
     }
+
+    [Fact]
+    public void Every_asset_the_xaml_loads_is_embedded_as_a_resource()
+    {
+        // The first ever launch of this app died instantly:
+        //     IOException: Cannot locate resource 'assets/systevo.ico'
+        //         at SystevoTune.App.MainWindow.InitializeComponent()
+        //
+        // MainWindow.xaml sets Icon="Assets/systevo.ico", but the csproj declared only the PNG as
+        // a <Resource>. ApplicationIcon is a different mechanism — it stamps the exe's Win32 icon
+        // and embeds nothing WPF can load at runtime.
+        //
+        // The build succeeded, the portable publish succeeded, CI was green and nine branding
+        // tests passed, because every one of those tests checked that a *string* was present
+        // somewhere. None checked that the resource actually resolves. This one compares what the
+        // XAML loads against what the project embeds, which is the gap the crash fell through.
+        var declared = ResourceInclude()
+            .Matches(File.ReadAllText(AppFile("SystevoTune.App.csproj")))
+            .Select(match => match.Groups["path"].Value.Replace('\\', '/'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missing = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(AppFile(string.Empty), "*.xaml", SearchOption.AllDirectories))
+        {
+            foreach (Match use in XamlAssetUse().Matches(File.ReadAllText(file)))
+            {
+                var asset = use.Groups["path"].Value;
+
+                if (!declared.Contains(asset))
+                {
+                    missing.Add($"{Path.GetFileName(file)} loads '{asset}' but no <Resource Include> declares it");
+                }
+            }
+        }
+
+        Assert.True(
+            missing.Count == 0,
+            "An asset is referenced from XAML but not embedded, so the app will throw on startup:"
+                + Environment.NewLine
+                + string.Join(Environment.NewLine, missing));
+    }
+
+    [GeneratedRegex(@"<Resource\s+Include=""(?<path>[^""]+)""", RegexOptions.ExplicitCapture)]
+    private static partial Regex ResourceInclude();
+
+    // Only real attribute usages — a path mentioned inside an XAML comment is not a load.
+    [GeneratedRegex(@"(?:Icon|Source)=""(?<path>Assets/[^""]+)""", RegexOptions.ExplicitCapture)]
+    private static partial Regex XamlAssetUse();
 
     private static string AssetPath(string name) => AppFile(Path.Combine("Assets", name));
 
