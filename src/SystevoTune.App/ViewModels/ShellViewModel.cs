@@ -65,6 +65,7 @@ public sealed class ShellViewModel : ObservableObject
             await Logs.RefreshAsync().ConfigureAwait(true);
         });
         GoToSettingsCommand = new RelayCommand(() => Screen = AppScreen.Settings);
+        ToggleLanguageCommand = new RelayCommand(() => CurrentLanguage = OtherLanguage);
     }
 
     /// <summary>Text lookup, bound throughout the XAML.</summary>
@@ -105,6 +106,25 @@ public sealed class ShellViewModel : ObservableObject
 
     /// <summary>Navigation.</summary>
     public RelayCommand GoToSettingsCommand { get; }
+
+    /// <summary>
+    /// Switches to the other language. There are two, so this is a toggle rather than a list.
+    /// </summary>
+    /// <remarks>
+    /// It was a <c>ComboBox</c> until the first VM run, where it rendered as an empty box: WPF's
+    /// default combo template keeps its own light chrome regardless of the Background we set, and
+    /// the theme's implicit TextBlock style painted the selected item near-white on it. A button
+    /// uses the style already proven readable on every other control in the window.
+    /// </remarks>
+    public RelayCommand ToggleLanguageCommand { get; }
+
+    /// <summary>
+    /// The language the toggle would move to — the button is labelled with where it goes, not
+    /// where it is, so it reads as an action.
+    /// </summary>
+    public Language OtherLanguage =>
+        Language.All.FirstOrDefault(language => language.Code != _localizer.Current.Code)
+            ?? _localizer.Current;
 
     /// <summary>The screen on show.</summary>
     public AppScreen Screen
@@ -152,6 +172,7 @@ public sealed class ShellViewModel : ObservableObject
             {
                 _localizer.Use(value);
                 Raise();
+                Raise(nameof(OtherLanguage));
             }
         }
     }

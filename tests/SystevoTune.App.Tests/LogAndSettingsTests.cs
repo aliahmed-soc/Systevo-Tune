@@ -218,6 +218,31 @@ public class LogAndSettingsTests : IDisposable
     }
 
     [Fact]
+    public void The_language_toggle_swaps_languages_and_relabels_itself()
+    {
+        // The switcher was a ComboBox until the first VM run, where it rendered as an empty box
+        // and made Arabic unreachable. A button is labelled with where it *goes*, not where it is,
+        // so the label has to follow the switch — otherwise it lies after a single press and there
+        // is no way back to English.
+        var localizer = NewLocalizer();
+        var model = new SettingsViewModel(localizer, _log);
+
+        Assert.Equal("en", model.CurrentLanguage.Code);
+        Assert.Equal("ar", model.OtherLanguage.Code);
+
+        model.ToggleLanguageCommand.Execute(null);
+
+        Assert.Equal("ar", localizer.Current.Code);
+        Assert.Equal("ar", model.CurrentLanguage.Code);
+        Assert.Equal("en", model.OtherLanguage.Code);
+
+        model.ToggleLanguageCommand.Execute(null);
+
+        Assert.Equal("en", localizer.Current.Code);
+        Assert.Equal("ar", model.OtherLanguage.Code);
+    }
+
+    [Fact]
     public void Settings_shows_where_the_logs_are_and_which_engine_built_it()
     {
         var model = new SettingsViewModel(NewLocalizer(), _log);

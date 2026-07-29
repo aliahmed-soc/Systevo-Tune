@@ -9,12 +9,13 @@
                 <StackPanel>
                     <TextBlock Text="{Binding [Settings_Language], Source={StaticResource Loc}}"
                                Style="{StaticResource SectionHeading}" />
-                    <ComboBox ItemsSource="{Binding Languages}"
-                              SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
-                              DisplayMemberPath="NativeName"
-                              HorizontalAlignment="Left"
-                              AutomationProperties.Name="{Binding [Settings_Language], Source={StaticResource Loc}}"
-                              TabIndex="70" />
+                    <Button Content="{Binding OtherLanguage.NativeName}"
+                            Command="{Binding ToggleLanguageCommand}"
+                            HorizontalAlignment="Left"
+                            MinWidth="120"
+                            FlowDirection="LeftToRight"
+                            AutomationProperties.Name="{Binding [Settings_Language], Source={StaticResource Loc}}"
+                            TabIndex="70" />
                 </StackPanel>
             </Border>
 

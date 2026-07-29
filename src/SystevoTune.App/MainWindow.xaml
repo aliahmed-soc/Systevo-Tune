@@ -47,12 +47,12 @@
                 <TextBlock Text="{Binding Localizer[Common_Language]}"
                            VerticalAlignment="Center" Margin="0,0,8,0"
                            Style="{StaticResource MutedText}" />
-                <ComboBox ItemsSource="{Binding Languages}"
-                          SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
-                          DisplayMemberPath="NativeName"
-                          MinWidth="120"
-                          AutomationProperties.Name="{Binding Localizer[Common_Language]}"
-                          TabIndex="90" />
+                <Button Content="{Binding OtherLanguage.NativeName}"
+                        Command="{Binding ToggleLanguageCommand}"
+                        MinWidth="120"
+                        FlowDirection="LeftToRight"
+                        AutomationProperties.Name="{Binding Localizer[Common_Language]}"
+                        TabIndex="90" />
             </StackPanel>
         </Grid>
 

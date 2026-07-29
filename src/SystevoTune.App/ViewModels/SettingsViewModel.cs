@@ -25,10 +25,19 @@ public sealed class SettingsViewModel : ObservableObject
 
         _localizer = localizer;
         LogFolder = log.DirectoryPath;
+        ToggleLanguageCommand = new RelayCommand(() => CurrentLanguage = OtherLanguage);
     }
 
     /// <summary>Languages offered.</summary>
     public IReadOnlyList<Language> Languages => Language.All;
+
+    /// <summary>Switches to the other language. See <see cref="ShellViewModel.ToggleLanguageCommand"/>.</summary>
+    public RelayCommand ToggleLanguageCommand { get; }
+
+    /// <summary>The language the toggle would move to, used as the button's label.</summary>
+    public Language OtherLanguage =>
+        Language.All.FirstOrDefault(language => language.Code != _localizer.Current.Code)
+            ?? _localizer.Current;
 
     /// <summary>Where the logs are written.</summary>
     public string LogFolder { get; }
@@ -55,6 +64,8 @@ public sealed class SettingsViewModel : ObservableObject
             {
                 _localizer.Use(value);
                 Raise();
+                Raise(nameof(OtherLanguage));
+                Raise(nameof(Copyright));
             }
         }
     }
